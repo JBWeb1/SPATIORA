@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { Link, Navigate } from "react-router-dom";
 import { api, errorMessage } from "../api";
-import { Logo } from "../components/ui";
 import { useAuth, useCatalog, useMoney } from "../state";
 import type { Estimate } from "../types";
 
@@ -88,7 +87,7 @@ export default function Landing() {
           </div>
           <p className="tiny" style={{ marginTop: 12 }}>{catalog.plans.free.monthlyGenerations} free AI redesigns every month · No card required</p>
         </div>
-        <div className="hero-art"><Logo size={300} color="#ffffff" bg="#262626" /></div>
+        <div className="hero-art"><img src="/brand/vistora-mark.webp" alt="VISTORA logo" style={{ width: "100%", height: "100%", objectFit: "cover" }} /></div>
       </section>
 
       <section id="how" className="container section">

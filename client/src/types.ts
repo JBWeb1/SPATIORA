@@ -98,6 +98,10 @@ export interface Catalog {
   vatRate: number;
   defaultAppliances: Appliance[];
   capabilities: { imageProvider: string; assistant: string };
+  dataStatus?: {
+    fx: import("./updater").DataFeedStatus;
+    catalog: import("./updater").DataFeedStatus & { products: number };
+  };
 }
 
 export interface Room {

@@ -3,6 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { api } from "../api";
 import { useAuth, useCatalog, useToast } from "../state";
 import type { PlanId, User } from "../types";
+import { useUpdater, type DataFeedStatus } from "../updater";
+import { fmtDate } from "../components/ui";
 
 export default function Account() {
   const { user, setUser, usage, refresh, logout } = useAuth();
@@ -11,6 +13,14 @@ export default function Account() {
   const nav = useNavigate();
   const [form, setForm] = useState({ name: user!.name, currency: user!.currency, province: user!.province, accountType: user!.accountType, company: user!.company ?? "" });
   const [pw, setPw] = useState({ current: "", next: "" });
+  const updater = useUpdater();
+  const feed = (label: string, f?: DataFeedStatus) => (
+    <div className="small">
+      <b>{label}:</b> {!f || !f.enabled ? "built-in reference data" : f.updatedAt ? `refreshed ${fmtDate(f.updatedAt, true)} from ${f.source}` : `waiting for first refresh from ${f.source}`}
+      {f?.enabled && <span className={`chip ${f.ok ? "good" : "warn"}`} style={{ marginLeft: 6 }}>{f.ok ? "auto-updating" : "retrying"}</span>}
+      {f?.enabled && !f.ok && <div className="tiny">{f.message}</div>}
+    </div>
+  );
 
   const saveProfile = async (e: FormEvent) => {
     e.preventDefault();
@@ -68,6 +78,17 @@ export default function Account() {
               );
             })}
             <p className="tiny" style={{ margin: 0 }}>Demo billing: plan switches apply instantly. Connect PayFast, Paystack or Stripe for live payments.</p>
+          </div>
+          <div className="card stack">
+            <h3 style={{ margin: 0 }}>App & data updates</h3>
+            <div className="small">You're on <b>VISTORA {updater.currentVersion}</b> <span className="tiny">(build {updater.currentBuild})</span></div>
+            {updater.updateReady
+              ? <div className="row"><span className="chip accent">Update ready{updater.latest ? `: ${updater.latest.version}` : ""}</span><button className="btn sm accent" onClick={updater.applyUpdate}>Update now</button></div>
+              : <div className="row"><span className="chip good">Up to date</span><button className="btn sm" onClick={updater.checkNow} disabled={updater.checking}>{updater.checking ? "Checking…" : "Check for updates"}</button>{updater.lastChecked && <span className="tiny">checked {updater.lastChecked.toLocaleTimeString()}</span>}</div>}
+            <label className="check"><input type="checkbox" checked={updater.autoUpdate} onChange={(e) => updater.setAutoUpdate(e.target.checked)} /> Install updates automatically (applied when you next change page)</label>
+            {feed("Exchange rates", updater.latest?.data.fx ?? catalog.dataStatus?.fx)}
+            {feed(`Product catalogue (${updater.latest?.data.catalog.products ?? catalog.dataStatus?.catalog.products ?? "—"} items)`, updater.latest?.data.catalog ?? catalog.dataStatus?.catalog)}
+            <div className="row"><button className="btn sm ghost" onClick={updater.showWhatsNew}>What's new</button><span className="tiny">Tip: install VISTORA from your browser menu ("Install app" / "Add to Home screen").</span></div>
           </div>
           <form className="card stack" onSubmit={changePw}>
             <h3 style={{ margin: 0 }}>Change password</h3>

@@ -13,6 +13,24 @@ import { assistantRouter } from "./routes/assistant.js";
 import { toolsRouter } from "./routes/tools.js";
 import { shareRouter } from "./routes/share.js";
 import { workspaceRouter } from "./routes/workspace.js";
+import { dataStatus } from "./services/liveData.js";
+
+const here = path.dirname(fileURLToPath(import.meta.url));
+const clientDist = path.resolve(here, "..", "..", "client", "dist");
+const startedAt = new Date().toISOString();
+const appVersion = (() => {
+  try { return (JSON.parse(fs.readFileSync(path.resolve(here, "..", "..", "package.json"), "utf8")) as { version: string }).version; } catch { return "0.0.0"; }
+})();
+
+/** Build id of the web client currently on disk (changes on every deploy). */
+function clientBuild(): { build: string; builtAt: string | null } {
+  try {
+    const v = JSON.parse(fs.readFileSync(path.join(clientDist, "version.json"), "utf8")) as { build: string; builtAt: string };
+    return { build: v.build, builtAt: v.builtAt };
+  } catch {
+    return { build: "dev", builtAt: null };
+  }
+}
 
 export function createApp() {
   const app = express();
@@ -34,6 +52,11 @@ export function createApp() {
   }, express.static(config.uploadDir, { fallthrough: false }));
 
   app.get("/api/health", (_req, res) => res.json({ ok: true, service: "vistora-api" }));
+  // Polled by the web client to discover new releases and data refreshes.
+  app.get("/api/version", (_req, res) => {
+    res.setHeader("Cache-Control", "no-store");
+    res.json({ version: appVersion, ...clientBuild(), serverStartedAt: startedAt, data: dataStatus() });
+  });
   app.use("/api/auth", authRouter);
   app.use("/api", catalogRouter);
   app.use("/api", shareRouter);
@@ -45,11 +68,15 @@ export function createApp() {
   app.use("/api", (_req, _res, next) => next(new HttpError(404, "Endpoint not found")));
 
   // In production, serve the built React client.
-  const here = path.dirname(fileURLToPath(import.meta.url));
-  const clientDist = path.resolve(here, "..", "..", "client", "dist");
   if (fs.existsSync(clientDist)) {
-    app.use(express.static(clientDist, { index: false, maxAge: "1h" }));
-    app.get(/^(?!\/api|\/uploads).*/, (_req, res) => res.sendFile(path.join(clientDist, "index.html")));
+    // Hashed assets are immutable; the shell, service worker and version file must always revalidate.
+    app.use(express.static(clientDist, {
+      index: false,
+      setHeaders: (res, file) => {
+        res.setHeader("Cache-Control", file.includes(`${path.sep}assets${path.sep}`) ? "public, max-age=31536000, immutable" : "no-cache");
+      },
+    }));
+    app.get(/^(?!\/api|\/uploads).*/, (_req, res) => { res.setHeader("Cache-Control", "no-cache"); res.sendFile(path.join(clientDist, "index.html")); });
   }
 
   app.use(errorHandler);

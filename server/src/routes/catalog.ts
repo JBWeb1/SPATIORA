@@ -3,6 +3,7 @@ import { CONTRACTORS, CURRENCIES, MATERIALS, PLANS, PRODUCTS, PROVINCES, ROOM_TY
 import { DEFAULT_APPLIANCES } from "../services/energy.js";
 import { activeImageProvider } from "../services/imageGen.js";
 import { config } from "../config.js";
+import { dataStatus } from "../services/liveData.js";
 
 export const catalogRouter = Router();
 
@@ -16,6 +17,7 @@ catalogRouter.get("/catalog", (_req, res) => {
     plans: PLANS,
     vatRate: VAT_RATE,
     defaultAppliances: DEFAULT_APPLIANCES,
+    dataStatus: dataStatus(),
     capabilities: { imageProvider: activeImageProvider(), assistant: config.claude.enabled ? "claude" : "vistora-advisor" },
   });
 });

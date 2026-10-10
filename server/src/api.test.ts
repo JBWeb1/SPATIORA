@@ -99,12 +99,22 @@ test("full homeowner flow", async () => {
   const energy = await api("POST", "/api/energy/plan", { province: "Gauteng", appliances: catalog.body.defaultAppliances, loadsheddingHours: 4, tariff: 3.5, wantSolar: true });
   assert.ok(energy.body.plan.system.inverterKva >= 3);
 
+  const version = await api("GET", "/api/version", undefined, false);
+  assert.match(version.body.version, /^\d+\.\d+\.\d+$/);
+  assert.ok(version.body.data.fx);
+
+  const pulse1 = await api("GET", `/api/projects/${id}/pulse`);
+  assert.equal(pulse1.body.designs, 2);
+
   const share = await api("POST", `/api/projects/${id}/share`, { enabled: true });
   const pub = await api("GET", `/api/share/${share.body.shareToken}`, undefined, false);
   assert.equal(pub.body.project.name, "Lounge refresh");
   assert.equal(pub.body.project.shareToken, undefined);
   const c = await api("POST", `/api/share/${share.body.shareToken}/comments`, { authorName: "Mom", body: "Love the green!", reaction: "love" }, false);
   assert.equal(c.status, 201);
+  const pulse2 = await api("GET", `/api/projects/${id}/pulse`);
+  assert.equal(pulse2.body.comments, pulse1.body.comments + 1);
+  assert.equal(pulse2.body.latestComment.authorName, "Mom");
 
   // Workspace is Pro-only.
   assert.equal((await api("GET", "/api/clients")).status, 402);

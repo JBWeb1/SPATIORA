@@ -1,8 +1,8 @@
 {
   "name": "vistora",
   "private": true,
-  "version": "1.0.0",
-  "description": "VISTORA — AI-powered interior design & home renovation platform. See the space. Shape the future.",
+  "version": "1.1.0",
+  "description": "VISTORA \u2014 AI-powered interior design & home renovation platform. See the space. Shape the future.",
   "workspaces": [
     "server",
     "client"
@@ -12,7 +12,8 @@
     "build": "npm run build -w client && npm run build -w server",
     "start": "npm run start -w server",
     "typecheck": "npm run typecheck -w server && npm run typecheck -w client",
-    "test": "npm run test -w server"
+    "test": "npm run test -w server",
+    "self-update": "node scripts/self-update.mjs"
   },
   "engines": {
     "node": ">=22.5"

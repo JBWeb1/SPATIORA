@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useEffect, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { api } from "../api";
 import { useCatalog, useMoney, useToast } from "../state";
@@ -51,6 +51,37 @@ export default function ProjectPage() {
 
   useEffect(() => { reload(); }, [reload]);
 
+  // Live updates: pick up new comments, concepts and edits made elsewhere (shared link
+  // visitors, another device or tab) without a manual refresh.
+  const [live, setLive] = useState(false);
+  const known = useRef<{ updatedAt: string; comments: number; designs: number } | null>(null);
+  useEffect(() => {
+    if (bundle) known.current = { updatedAt: bundle.project.updatedAt, comments: bundle.comments.length, designs: bundle.designs.length };
+  }, [bundle]);
+  useEffect(() => {
+    let stopped = false;
+    const tick = async () => {
+      if (document.visibilityState !== "visible" || !known.current) return;
+      try {
+        const pulse = await api.get<{ updatedAt: string; comments: number; designs: number; latestComment: { authorName: string; body: string; isOwner: number } | null }>(`/projects/${id}/pulse`);
+        if (stopped) return;
+        setLive(true);
+        const k = known.current;
+        if (pulse.comments > k.comments && pulse.latestComment && !pulse.latestComment.isOwner) {
+          toast.info(`💬 ${pulse.latestComment.authorName}: ${pulse.latestComment.body.slice(0, 80)}`);
+        }
+        if (pulse.comments !== k.comments || pulse.designs !== k.designs || pulse.updatedAt !== k.updatedAt) {
+          known.current = { updatedAt: pulse.updatedAt, comments: pulse.comments, designs: pulse.designs };
+          const fresh = await api.get<ProjectBundle>(`/projects/${id}`);
+          if (!stopped) setBundleState(fresh);
+        }
+      } catch { setLive(false); }
+    };
+    const t = setInterval(tick, 15_000);
+    document.addEventListener("visibilitychange", tick);
+    return () => { stopped = true; clearInterval(t); document.removeEventListener("visibilitychange", tick); };
+  }, [id, toast]);
+
   const setBundle = useCallback((fn: (b: ProjectBundle) => ProjectBundle) => setBundleState((b) => (b ? fn(b) : b)), []);
   const save = useCallback(async (patch: Partial<Project>) => {
     try {
@@ -95,6 +126,7 @@ export default function ProjectPage() {
               {Object.entries(STATUS_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
             </select>
             <span>{p.room.length} × {p.room.width} m · {(p.room.length * p.room.width).toFixed(1)} m²</span>
+            {live && <span title="This page updates itself when collaborators comment or the project changes elsewhere"><span className="live-dot" />Live</span>}
             <span>Budget: <input type="number" min={0} step={1000} defaultValue={money.fromZar(p.budget) || ""} placeholder="not set" style={{ width: 120 }} onBlur={(e) => save({ budget: money.toZar(Number(e.target.value) || 0) })} /> {money.code}</span>
           </div>
         </div>

@@ -108,6 +108,11 @@ export function CatalogProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState<string | null>(null);
   useEffect(() => {
     api.get<Catalog>("/catalog").then(setCatalog).catch((e) => setError(errorMessage(e)));
+    // Keep exchange rates, prices and capabilities fresh in long-lived tabs.
+    const t = setInterval(() => {
+      if (document.visibilityState === "visible") api.get<Catalog>("/catalog").then(setCatalog).catch(() => {});
+    }, 30 * 60_000);
+    return () => clearInterval(t);
   }, []);
   if (error) return <div className="container section"><div className="empty">Could not reach the VISTORA API: {error}</div></div>;
   if (!catalog) return <div className="container section muted">Loading VISTORA…</div>;

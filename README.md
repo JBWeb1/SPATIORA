@@ -34,7 +34,23 @@ It is built for South Africa first (rand, 15% VAT, provincial pricing, load-shed
 - **Share & collaborate.** A read-only share link (with a WhatsApp share button) where family and clients can react with emoji and comment on each concept. Their feedback appears on your dashboard.
 - **Mood board.** Collect colours, materials, products, notes and favourite concepts on one board per project.
 - **Plans & usage limits.** Free, Premium and Professional tiers with monthly AI allowances and project limits.
+- **Self-updating platform** (see below).
 - **Light and dark themes**, a mobile-friendly layout and accessible controls (a keyboard-operable before/after slider, ARIA labels).
+
+## Self-updating
+
+VISTORA keeps itself current at every level:
+
+| Layer | How it updates itself |
+| --- | --- |
+| **Web app** | Every build gets its own build id. Open tabs poll `/api/version` (every 5 minutes, when the tab regains focus and when the device comes back online) and the service worker checks for a new version of itself. When a release is detected, an "Update now" banner appears. With **auto-update** on (the default, toggled in Account), the update installs on the next page change so nothing being typed is lost. After updating, a **What's new** panel lists the changes (`client/src/changelog.ts`). |
+| **Installable app** | A web manifest and service worker let users install VISTORA on a phone or desktop. The app shell and icons are cached for offline start, and each release replaces the old cache cleanly. |
+| **Live projects** | Open project pages check a lightweight `/api/projects/:id/pulse` endpoint every 15 seconds. New comments from share-link visitors, new concepts and edits from other devices appear automatically, with a notification and a "Live" indicator. |
+| **Exchange rates** | Refreshed every 12 hours from `FX_RATES_URL` (defaults to a free ZAR-based feed). Implausible values are rejected, and the last good rates are kept if the feed is down. Open tabs pull fresh rates every 30 minutes. |
+| **Product catalogue** | Point `CATALOG_FEED_URL` at a partner feed to add new products, update prices, lead times and ratings, and remove discontinued items, every 6 hours. Invalid rows are skipped. |
+| **Server** | `npm run self-update` (`scripts/self-update.mjs`) checks git for a newer release, then fast-forwards, installs, builds and tests it, and runs `RESTART_COMMAND`. If any step fails it rolls back automatically. Schedule it with cron or a systemd timer, for example: `*/15 * * * * cd /srv/vistora && RESTART_COMMAND="systemctl restart vistora" npm run self-update`. On Docker, use a tool such as Watchtower to pull new images. |
+
+Account → **App & data updates** shows the current version, lets users check for updates and toggle auto-update, and reports when rates and the catalogue last refreshed.
 
 ## Tech stack
 
@@ -82,6 +98,8 @@ Run the API tests with `npm test`, and typecheck everything with `npm run typech
 | `DATA_DIR` | Location of the SQLite database and uploaded images (default `./data`). |
 | `ANTHROPIC_API_KEY` | Turns on Claude for the assistant, photo analysis and briefs. `CLAUDE_MODEL` defaults to `claude-opus-5-5`. |
 | `REPLICATE_API_TOKEN` + `REPLICATE_MODEL_VERSION` | Photorealistic redesigns through any Replicate image-to-image interior model that accepts `image`, `prompt` and `negative_prompt`. |
+| `FX_RATES_URL`, `FX_REFRESH_HOURS` | Exchange-rate feed quoted per 1 ZAR (or any base that includes ZAR), and how often to refresh it. Set the URL to `off` to keep the built-in rates. |
+| `CATALOG_FEED_URL`, `CATALOG_REFRESH_HOURS` | Optional partner product feed: `{ "products": [...] }` containing full products or `{ "id", "price" }` updates, plus `"discontinued": true` to remove an item. |
 | `IMAGE_PROVIDER_URL` (+ `IMAGE_PROVIDER_KEY`) | Or your own endpoint. It receives `{ image, prompt, negativePrompt, style, roomType, preserveLayout }` and must return `{ image }` as a data URL or https URL. |
 
 With no AI keys, VISTORA runs fully offline. Redesigns come from the built-in **Studio Preview** renderer, which recolours your photo into the style's palette and adds design callouts and swatches. The assistant uses its rule-based advisor. If an external provider fails, VISTORA falls back to these automatically.

@@ -30,6 +30,14 @@ export const config = {
     enabled: Boolean(env.ANTHROPIC_API_KEY || env.ANTHROPIC_AUTH_TOKEN),
     model: env.CLAUDE_MODEL || "claude-opus-5-5",
   },
+  liveData: {
+    // Daily exchange rates quoted per 1 ZAR. Set to "off" to keep the built-in rates.
+    fxUrl: env.FX_RATES_URL ?? "https://open.er-api.com/v6/latest/ZAR",
+    fxHours: Number(env.FX_REFRESH_HOURS ?? 12),
+    // Optional partner product feed: JSON { products: [...] } with full products or { id, price } updates.
+    catalogUrl: env.CATALOG_FEED_URL || "",
+    catalogHours: Number(env.CATALOG_REFRESH_HOURS ?? 6),
+  },
   images: {
     replicateToken: env.REPLICATE_API_TOKEN || "",
     replicateVersion: env.REPLICATE_MODEL_VERSION || "",

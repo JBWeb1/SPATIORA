@@ -1,16 +1,15 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 
-export function Logo({ size = 28, color = "currentColor", bg = "var(--logo-bg)" }: { size?: number; color?: string; bg?: string }) {
-  // Six offset arches — a doorway into the future space.
-  const arches = [0, 1, 2, 3, 4, 5];
+/** The VISTORA brand mark (the uploaded logo artwork). */
+export function Logo({ size = 28, full = false }: { size?: number; full?: boolean }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 64 64" aria-hidden="true">
-      <g fill={bg} stroke={color} strokeWidth={2.4} strokeLinejoin="round">
-        {arches.map((i) => (
-          <path key={i} d={`M${10 + i * 4} ${44 + i * 3}V${22 + i * 3}a11 11 0 0 1 22 0V${44 + i * 3}Z`} />
-        ))}
-      </g>
-    </svg>
+    <img
+      src={full ? "/brand/vistora-mark.webp" : "/brand/vistora-logo-256.webp"}
+      width={size}
+      height={size}
+      alt="VISTORA"
+      style={{ width: size, height: size, borderRadius: Math.max(6, size * 0.22), display: "block", flex: "none" }}
+    />
   );
 }
 

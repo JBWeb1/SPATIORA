@@ -104,6 +104,17 @@ projectsRouter.get("/projects/:id", (req, res) => {
   });
 });
 
+// Lightweight change signal so open project pages update themselves live.
+projectsRouter.get("/projects/:id/pulse", (req, res) => {
+  const p = ownedProject(req, String(req.params.id));
+  const counts = get<{ comments: number; designs: number }>(
+    "SELECT (SELECT COUNT(*) FROM comments WHERE project_id = ?) AS comments, (SELECT COUNT(*) FROM designs WHERE project_id = ?) AS designs", p.id, p.id)!;
+  const latest = get<{ authorName: string; body: string; isOwner: number }>(
+    "SELECT author_name AS authorName, body, user_id IS NOT NULL AS isOwner FROM comments WHERE project_id = ? ORDER BY created_at DESC, rowid DESC LIMIT 1", p.id);
+  res.setHeader("Cache-Control", "no-store");
+  res.json({ updatedAt: p.updated_at, ...counts, latestComment: latest ?? null });
+});
+
 projectsRouter.patch("/projects/:id", (req, res) => {
   const p = ownedProject(req, String(req.params.id));
   const b = projectPatch.parse(req.body);
