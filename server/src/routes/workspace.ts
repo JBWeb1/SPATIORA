@@ -6,6 +6,7 @@ import { notFound } from "../lib/http.js";
 import { ownedProject, serializeProject, shoppingList } from "../lib/projects.js";
 import { CONTRACTORS, VAT_RATE } from "../data/catalog.js";
 import { estimate } from "../services/estimator.js";
+import { notify } from "../services/notifications.js";
 
 export const workspaceRouter = Router();
 workspaceRouter.use(requireAuth);
@@ -20,6 +21,7 @@ workspaceRouter.post("/contractors/:id/requests", (req, res) => {
   if (b.projectId) ownedProject(req, b.projectId);
   const id = newId();
   run("INSERT INTO contractor_requests (id, user_id, project_id, contractor_id, message) VALUES (?, ?, ?, ?, ?)", id, user.id, b.projectId ?? null, contractor.id, b.message);
+  notify(user.id, "contractor", `Quote request sent to ${contractor.name}`, `They usually reply within ${contractor.responseHours} hours.`, "/contractors");
   res.status(201).json({ request: { id, contractor: contractor.name, status: "sent", expectedResponseHours: contractor.responseHours } });
 });
 
@@ -165,6 +167,7 @@ workspaceRouter.post("/quotes/from-project/:projectId", requirePro, (req, res) =
 });
 
 workspaceRouter.patch("/quotes/:id", requirePro, (req, res) => {
+  const before = get<{ status: string }>("SELECT status FROM quotes WHERE id = ? AND user_id = ?", String(req.params.id), currentUser(req).id);
   const user = currentUser(req);
   const q = get<QuoteRow>("SELECT * FROM quotes WHERE id = ? AND user_id = ?", String(req.params.id), user.id);
   if (!q) throw notFound("Quote");
@@ -174,6 +177,7 @@ workspaceRouter.patch("/quotes/:id", requirePro, (req, res) => {
     b.title ?? q.title, b.projectId === undefined ? q.project_id : b.projectId, b.clientId === undefined ? q.client_id : b.clientId,
     b.items ? JSON.stringify(b.items) : q.items, b.vatRate ?? q.vat_rate, b.markup ?? q.markup, b.status ?? q.status,
     b.notes === undefined ? q.notes : b.notes, b.validUntil === undefined ? q.valid_until : b.validUntil, q.id);
+  if (b.status === "accepted" && before?.status !== "accepted") notify(user.id, "quote", `🎉 ${q.number} accepted`, q.title, "/workspace");
   res.json({ quote: serializeQuote(get<QuoteRow>(`${quoteQuery} WHERE q.id = ?`, q.id)!) });
 });
 

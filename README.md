@@ -34,6 +34,17 @@ It is built for South Africa first (rand, 15% VAT, provincial pricing, load-shed
 - **Share & collaborate.** A read-only share link (with a WhatsApp share button) where family and clients can react with emoji and comment on each concept. Their feedback appears on your dashboard.
 - **Mood board.** Collect colours, materials, products, notes and favourite concepts on one board per project.
 - **Plans & usage limits.** Free, Premium and Professional tiers with monthly AI allowances and project limits.
+- **Notification centre.** A bell icon collects comments from share links, price drops on saved products, contractor requests and accepted quotes.
+- **Saved products & price-drop alerts.** Tap ♡ on any product. When the self-updating catalogue lowers its price by 3% or more, you're notified (once per new low).
+- **Budget optimiser.** Shows the cheaper like-for-like swaps that save the most (favouring ones that suit your style), plus lower finish tiers and a leaner contingency. Apply each swap with one click, or apply the best combination.
+- **Financing calculator.** Monthly repayments, total interest and the financed amount for your renovation, with your deposit, rate and term.
+- **3D Studio smart tools.**
+  - *Auto-furnish* builds a starter layout for the room type that fits the room and passes its own checks.
+  - The *layout checker* flags collisions, walkways under 60 cm, blocked door swings, tall items in front of windows and crowding.
+  - *Saved layout versions* can be restored at any time.
+- **Present mode.** A polished client presentation (cover, design direction, concepts, finishes schedule, mood board, investment summary) that prints or saves to PDF.
+- **Quick search.** Press Ctrl+K / ⌘K to jump to any project, project tab, page or product.
+- **Business dashboard (`/admin`).** MRR/ARR, users and paid conversion, AI usage, 30-day sign-ups, plans, account types, popular styles and rooms, estimated marketplace commission and lead-gen volume. Access is limited to `ADMIN_EMAILS`.
 - **Self-updating platform** (see below).
 - **Light and dark themes**, a mobile-friendly layout and accessible controls (a keyboard-operable before/after slider, ARIA labels).
 
@@ -100,6 +111,7 @@ Run the API tests with `npm test`, and typecheck everything with `npm run typech
 | `REPLICATE_API_TOKEN` + `REPLICATE_MODEL_VERSION` | Photorealistic redesigns through any Replicate image-to-image interior model that accepts `image`, `prompt` and `negative_prompt`. |
 | `FX_RATES_URL`, `FX_REFRESH_HOURS` | Exchange-rate feed quoted per 1 ZAR (or any base that includes ZAR), and how often to refresh it. Set the URL to `off` to keep the built-in rates. |
 | `CATALOG_FEED_URL`, `CATALOG_REFRESH_HOURS` | Optional partner product feed: `{ "products": [...] }` containing full products or `{ "id", "price" }` updates, plus `"discontinued": true` to remove an item. |
+| `ADMIN_EMAILS` | Comma-separated emails that can open the business dashboard at `/admin`. |
 | `IMAGE_PROVIDER_URL` (+ `IMAGE_PROVIDER_KEY`) | Or your own endpoint. It receives `{ image, prompt, negativePrompt, style, roomType, preserveLayout }` and must return `{ image }` as a data URL or https URL. |
 
 With no AI keys, VISTORA runs fully offline. Redesigns come from the built-in **Studio Preview** renderer, which recolours your photo into the style's palette and adds design callouts and swatches. The assistant uses its rule-based advisor. If an external provider fails, VISTORA falls back to these automatically.

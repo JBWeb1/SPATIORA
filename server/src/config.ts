@@ -26,6 +26,8 @@ export const config = {
   dataDir,
   uploadDir: path.join(dataDir, "uploads"),
   dbFile: path.join(dataDir, "vistora.db"),
+  // Comma-separated emails that can open the admin dashboard.
+  adminEmails: (env.ADMIN_EMAILS ?? "").split(",").map((e) => e.trim().toLowerCase()).filter(Boolean),
   claude: {
     enabled: Boolean(env.ANTHROPIC_API_KEY || env.ANTHROPIC_AUTH_TOKEN),
     model: env.CLAUDE_MODEL || "claude-opus-5-5",

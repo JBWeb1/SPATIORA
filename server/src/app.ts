@@ -14,6 +14,8 @@ import { toolsRouter } from "./routes/tools.js";
 import { shareRouter } from "./routes/share.js";
 import { workspaceRouter } from "./routes/workspace.js";
 import { dataStatus } from "./services/liveData.js";
+import { engagementRouter } from "./routes/engagement.js";
+import { adminRouter } from "./routes/admin.js";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const clientDist = path.resolve(here, "..", "..", "client", "dist");
@@ -65,6 +67,8 @@ export function createApp() {
   app.use("/api", plannerRouter);
   app.use("/api", assistantRouter);
   app.use("/api", workspaceRouter);
+  app.use("/api", engagementRouter);
+  app.use("/api", adminRouter);
   app.use("/api", (_req, _res, next) => next(new HttpError(404, "Endpoint not found")));
 
   // In production, serve the built React client.

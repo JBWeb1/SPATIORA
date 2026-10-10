@@ -1,8 +1,10 @@
 import { config } from "./config.js";
 import { createApp } from "./app.js";
-import { startLiveData } from "./services/liveData.js";
+import { onCatalogUpdated, startLiveData } from "./services/liveData.js";
+import { checkPriceDrops } from "./services/notifications.js";
 
 const app = createApp();
+onCatalogUpdated(checkPriceDrops);
 startLiveData(config.liveData);
 app.listen(config.port, () => {
   console.log(`VISTORA API listening on http://localhost:${config.port}`);

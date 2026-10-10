@@ -7,6 +7,19 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: "1.2.0",
+    date: "2026-10-10",
+    highlights: [
+      "Notification centre: comments on shared projects, price drops and quote updates in one place.",
+      "Save products with ♡ and get alerted when their price drops.",
+      "Budget optimiser suggests cheaper swaps to hit your budget — apply them in one click.",
+      "Financing calculator shows monthly repayments for your renovation.",
+      "3D Studio: auto-furnish a room, a layout checker for walkways and blocked doors, and saved layout versions.",
+      "Present mode: a polished client presentation you can print or save as PDF.",
+      "Quick search with Ctrl+K / ⌘K to jump to any project, page or product.",
+    ],
+  },
+  {
     version: "1.1.0",
     date: "2026-10-10",
     highlights: [

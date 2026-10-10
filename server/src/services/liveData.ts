@@ -104,12 +104,18 @@ export function applyProductFeed(rows: unknown[]) {
   return { added, updated, removed, skipped };
 }
 
+type Listener = () => void;
+const catalogListeners: Listener[] = [];
+/** Run a callback whenever the product catalogue refreshes (e.g. price-drop alerts). */
+export const onCatalogUpdated = (fn: Listener) => { catalogListeners.push(fn); };
+
 export async function refreshCatalog(url: string) {
   status.catalog.lastAttemptAt = now();
   try {
     const { products } = feedSchema.parse(await fetchJson(url, 30_000));
     const r = applyProductFeed(products);
     Object.assign(status.catalog, { ok: true, updatedAt: now(), message: `+${r.added} new, ${r.updated} updated, ${r.removed} discontinued, ${r.skipped} skipped` });
+    for (const fn of catalogListeners) { try { fn(); } catch (err) { console.error("[vistora] catalogue listener failed:", err); } }
   } catch (err) {
     Object.assign(status.catalog, { ok: false, message: `Refresh failed (${(err as Error).message}); keeping current catalogue` });
   }

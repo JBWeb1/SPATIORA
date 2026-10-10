@@ -3,10 +3,11 @@ import { api } from "../api";
 import { useAuth, useCatalog, useMoney, useToast } from "../state";
 import type { Estimate } from "../types";
 import type { TabProps } from "./context";
+import { BudgetOptimiser, FinancingCalculator } from "./BudgetTools";
 
 interface EstimateResponse { estimate: Estimate; furnitureTotal: number; budget: number; grandTotal: number }
 
-export default function EstimateTab({ bundle, goTo }: TabProps) {
+export default function EstimateTab({ bundle, goTo, save }: TabProps) {
   const { user } = useAuth();
   const catalog = useCatalog();
   const [currency, setCurrency] = useState(user?.currency ?? "ZAR");
@@ -46,6 +47,8 @@ export default function EstimateTab({ bundle, goTo }: TabProps) {
           </label>
           <p className="tiny" style={{ margin: 0 }}>Regional pricing for {user?.province}. Change your province in Account.</p>
         </div>
+        {data && <BudgetOptimiser project={bundle.project} opts={opts} grandTotal={data.grandTotal} save={save} currency={currency} />}
+        {data && <FinancingCalculator amount={data.grandTotal} currency={currency} />}
         {!hasFinishes && <div className="card"><p className="small">Pick flooring, paint and other finishes to build a full estimate.</p><button className="btn sm accent" onClick={() => goTo("materials")}>Choose materials</button></div>}
       </div>
 

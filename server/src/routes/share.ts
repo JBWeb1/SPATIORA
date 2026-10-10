@@ -2,6 +2,7 @@ import { Router } from "express";
 import { z } from "zod";
 import { all, get, newId, run } from "../db.js";
 import { rateLimit } from "../lib/auth.js";
+import { notify } from "../services/notifications.js";
 import { notFound } from "../lib/http.js";
 import { serializeDesign, serializeProject, shoppingList, type DesignRow, type ProjectRow } from "../lib/projects.js";
 
@@ -38,5 +39,6 @@ shareRouter.post("/share/:token/comments", rateLimit(10, 60_000), (req, res) => 
   if (b.designId && !get("SELECT id FROM designs WHERE id = ? AND project_id = ?", b.designId, p.id)) throw notFound("Design");
   run("INSERT INTO comments (id, project_id, design_id, author_name, body, reaction) VALUES (?, ?, ?, ?, ?, ?)",
     newId(), p.id, b.designId ?? null, b.authorName, b.body, b.reaction ?? null);
+  notify(p.user_id, "comment", `${b.authorName} commented on ${p.name}`, b.body, `/projects/${p.id}?tab=share`);
   res.status(201).json({ ok: true });
 });

@@ -11,8 +11,12 @@ import StyleQuiz from "./pages/StyleQuiz";
 import Shared from "./pages/Shared";
 import Account from "./pages/Account";
 import Workspace from "./pages/Workspace";
+import NotificationBell from "./components/NotificationBell";
+import CommandPalette from "./components/CommandPalette";
 
 const ProjectPage = lazy(() => import("./pages/Project"));
+const Present = lazy(() => import("./pages/Present"));
+const Admin = lazy(() => import("./pages/Admin"));
 
 function Protected({ children }: { children: ReactNode }) {
   const { user, loading } = useAuth();
@@ -53,6 +57,8 @@ function TopBar() {
               <NavLink to="/style-quiz">Style DNA</NavLink>
               <NavLink to="/workspace">Pro Workspace</NavLink>
               <NavLink to="/account">Account</NavLink>
+              {user.isAdmin && <NavLink to="/admin">Admin</NavLink>}
+              <a href="/" className="mobile-only" onClick={(e) => { e.preventDefault(); logout(); }}>Sign out</a>
             </>
           ) : (
             <>
@@ -63,10 +69,12 @@ function TopBar() {
             </>
           )}
         </nav>
-        <div className="row" style={{ gap: 6 }}>
+        <div className="row topbar-actions" style={{ gap: 6 }}>
+          {user && <button className="btn ghost sm search-btn" onClick={() => window.dispatchEvent(new Event("vistora:palette"))} aria-label="Search (Ctrl+K)" title="Search (Ctrl+K)">⌕ <span className="kbd">Ctrl K</span></button>}
+          {user && <NotificationBell />}
           <ThemeToggle />
           {user ? (
-            <button className="btn sm" onClick={logout}>Sign out</button>
+            <button className="btn sm desktop-only" onClick={logout}>Sign out</button>
           ) : (
             <>
               <Link className="btn ghost sm" to="/login">Sign in</Link>
@@ -82,10 +90,12 @@ function TopBar() {
 
 export default function App() {
   const loc = useLocation();
-  const bare = loc.pathname.startsWith("/s/");
+  const { user } = useAuth();
+  const bare = loc.pathname.startsWith("/s/") || loc.pathname.endsWith("/present");
   return (
     <>
       {!bare && <TopBar />}
+      {user && <CommandPalette />}
       <main>
         <Suspense fallback={<div className="container section muted">Loading…</div>}>
           <Routes>
@@ -96,6 +106,8 @@ export default function App() {
             <Route path="/s/:token" element={<Shared />} />
             <Route path="/app" element={<Protected><Dashboard /></Protected>} />
             <Route path="/projects/:id" element={<Protected><ProjectPage /></Protected>} />
+            <Route path="/projects/:id/present" element={<Protected><Present /></Protected>} />
+            <Route path="/admin" element={<Protected><Admin /></Protected>} />
             <Route path="/contractors" element={<Protected><Contractors /></Protected>} />
             <Route path="/style-quiz" element={<Protected><StyleQuiz /></Protected>} />
             <Route path="/workspace" element={<Protected><Workspace /></Protected>} />

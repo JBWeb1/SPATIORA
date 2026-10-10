@@ -232,3 +232,50 @@ footer.site { border-top: 1px solid var(--line); padding: 28px 0; color: var(--i
 .live-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--good); margin-right: 6px; box-shadow: 0 0 0 0 color-mix(in srgb, var(--good) 60%, transparent); animation: live 2s infinite; }
 @keyframes live { 70% { box-shadow: 0 0 0 7px transparent; } 100% { box-shadow: 0 0 0 0 transparent; } }
 @media (prefers-reduced-motion: reduce) { .live-dot { animation: none; } }
+
+/* ---------- Notifications ---------- */
+.bell { position: relative; }
+.bell-count { position: absolute; top: -2px; right: -2px; min-width: 17px; height: 17px; padding: 0 4px; border-radius: 99px; background: var(--bad); color: #fff; font-size: 11px; font-weight: 600; display: grid; place-items: center; }
+.bell .btn { position: relative; }
+.bell-panel { position: absolute; right: 0; top: calc(100% + 8px); width: min(360px, calc(100vw - 32px)); background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 16px 40px rgba(0,0,0,.18); z-index: 40; overflow: hidden; }
+@media (max-width: 600px) { .bell-panel { position: fixed; left: 16px; right: 16px; top: 66px; width: auto; } }
+.bell-item { display: flex; gap: 10px; width: 100%; padding: 10px 12px; border: 0; border-bottom: 1px solid var(--line); background: none; color: inherit; font: inherit; cursor: pointer; }
+.bell-item:hover { background: var(--surface-2); }
+.bell-item.unread { background: var(--accent-soft); }
+
+/* ---------- Command palette ---------- */
+.palette { width: min(620px, 100%); padding: 0; overflow: hidden; }
+.palette input { border: 0; border-bottom: 1px solid var(--line); border-radius: 0; padding: 16px 18px; font-size: 16px; }
+.palette input:focus { outline: none; }
+.palette-list { max-height: 50vh; overflow-y: auto; padding: 6px; }
+.palette-item { display: flex; gap: 10px; align-items: center; width: 100%; padding: 9px 12px; border: 0; border-radius: 9px; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.palette-item.on { background: var(--surface-2); }
+.kbd { font: 500 11px var(--font); border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 5px; padding: 1px 5px; color: var(--ink-3); }
+
+/* ---------- Bars (admin) ---------- */
+.hbar { display: grid; grid-template-columns: minmax(70px, 38%) 1fr 32px; gap: 8px; align-items: center; font-size: 13px; margin-bottom: 2px; }
+.hbar .track { height: 14px; background: var(--surface-2); border-radius: 0 4px 4px 0; }
+.hbar .fill { height: 100%; background: var(--accent); border-radius: 0 4px 4px 0; min-width: 2px; }
+.vbars { display: flex; align-items: flex-end; gap: 2px; height: 140px; border-bottom: 1px solid var(--line); }
+.vbars .col { flex: 1; display: flex; align-items: flex-end; height: 100%; position: relative; }
+.vbars .col span { width: 100%; background: var(--accent); border-radius: 4px 4px 0 0; min-height: 2px; }
+.vbars .col:hover span { filter: brightness(1.15); }
+.vbars .col .tip { display: none; position: absolute; bottom: calc(100% + 4px); left: 50%; transform: translateX(-50%); background: var(--brand); color: var(--bg); font-size: 12px; padding: 3px 7px; border-radius: 6px; white-space: nowrap; z-index: 2; }
+.vbars .col:hover .tip, .vbars .col:focus .tip { display: block; }
+
+/* ---------- Presentation ---------- */
+.present { max-width: 1000px; margin: 0 auto; padding: 24px 20px 60px; }
+.present section { page-break-inside: avoid; break-inside: avoid; margin-bottom: 36px; }
+.present .cover { min-height: 60vh; display: flex; flex-direction: column; justify-content: flex-end; border-radius: 20px; overflow: hidden; position: relative; color: #fff; padding: 32px; background: #282828; }
+.present .cover img.bg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: .7; }
+.present .cover::after { content: ""; position: absolute; inset: 0; background: linear-gradient(to top, rgba(20,20,20,.88) 0%, rgba(20,20,20,.35) 45%, rgba(20,20,20,.55) 100%); }
+.present .cover > * { position: relative; z-index: 1; }
+@media print { .present .cover { min-height: 90vh; } .present section { page-break-after: always; } }
+@media (max-width: 860px) { .search-btn .kbd { display: none; } }
+
+.topbar-actions { flex-wrap: nowrap; margin-left: auto; }
+.nav .mobile-only { display: none; }
+@media (max-width: 860px) {
+  .nav .mobile-only { display: block; }
+  .btn.desktop-only { display: none; }
+}

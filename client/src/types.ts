@@ -12,6 +12,17 @@ export interface User {
   province: string;
   styleProfile: StyleProfile | null;
   createdAt: string;
+  isAdmin?: boolean;
+}
+
+export interface AppNotification {
+  id: string;
+  kind: "comment" | "price-drop" | "quote" | "contractor" | "system";
+  title: string;
+  body: string | null;
+  link: string | null;
+  read: boolean;
+  createdAt: string;
 }
 
 export interface StyleProfile {

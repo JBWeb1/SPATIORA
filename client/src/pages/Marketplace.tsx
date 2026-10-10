@@ -11,13 +11,23 @@ export default function Marketplace() {
   const money = useMoney();
   const toast = useToast();
   const [params] = useSearchParams();
-  const [filters, setFilters] = useState({ q: "", category: "", style: "", maxPrice: 0, eco: false, local: false, sort: "relevance" });
+  const [filters, setFilters] = useState({ q: params.get("q") ?? "", category: "", style: "", maxPrice: 0, eco: false, local: false, sort: "relevance" });
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [target, setTarget] = useState(params.get("project") ?? "");
   const [compare, setCompare] = useState<Product[]>([]);
   const [showCompare, setShowCompare] = useState(false);
+  const [watch, setWatch] = useState<{ product: Product; priceAtAdd: number }[]>([]);
+  const watched = (id: string) => watch.some((w) => w.product.id === id);
+  useEffect(() => { if (user) api.get<{ items: typeof watch }>("/watchlist").then((r) => setWatch(r.items)).catch(() => {}); }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
+  const toggleWatch = async (p: Product) => {
+    try {
+      const r = watched(p.id) ? await api.del<{ items: typeof watch }>(`/watchlist/${p.id}`) : await api.post<{ items: typeof watch }>("/watchlist", { productId: p.id });
+      setWatch(r.items);
+      if (!watched(p.id)) toast.info("Saved — we'll notify you if the price drops");
+    } catch (err) { toast.error(err); }
+  };
 
   useEffect(() => {
     const qs = new URLSearchParams();
@@ -66,6 +76,25 @@ export default function Marketplace() {
         <label className="check"><input type="checkbox" checked={filters.local} onChange={(e) => setFilters({ ...filters, local: e.target.checked })} /> 🇿🇦 Locally made</label>
       </div>
 
+      {watch.length > 0 && (
+        <div className="card" style={{ marginBottom: 16 }}>
+          <div className="row between"><h3 style={{ margin: 0 }}>♥ Saved items & price alerts</h3><span className="tiny">We notify you when a saved item drops 3% or more.</span></div>
+          <div className="row" style={{ marginTop: 10, gap: 8 }}>
+            {watch.map((w) => {
+              const diff = w.product.price - w.priceAtAdd;
+              return (
+                <span key={w.product.id} className="chip" style={{ padding: "6px 10px" }}>
+                  {w.product.name} · {money.format(w.product.price)}
+                  {diff < 0 && <b style={{ color: "var(--good)" }}> ↓{money.format(-diff)}</b>}
+                  {diff > 0 && <span style={{ color: "var(--ink-3)" }}> ↑{money.format(diff)}</span>}
+                  <button className="btn ghost sm" style={{ padding: "0 4px" }} onClick={() => toggleWatch(w.product)} aria-label={`Remove ${w.product.name}`}>✕</button>
+                </span>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {compare.length > 0 && (
         <div className="card row between" style={{ marginBottom: 16, background: "var(--accent-soft)" }}>
           <span className="small">Comparing: {compare.map((c) => c.name).join(" · ")}</span>
@@ -88,7 +117,8 @@ export default function Marketplace() {
             <div className="row between"><b>{money.format(p.price)}</b><span className="tiny">{p.size.w}×{p.size.d}×{p.size.h} m</span></div>
             <div className="row" style={{ gap: 6 }}>
               {user ? <button className="btn sm primary grow" onClick={() => add(p)}>Add to list</button> : <Link to="/register" className="btn sm primary grow">Sign up to save</Link>}
-              <button className={`btn sm ${compare.some((x) => x.id === p.id) ? "accent" : ""}`} onClick={() => toggleCompare(p)} title="Compare">⇄</button>
+              <button className={`btn sm ${compare.some((x) => x.id === p.id) ? "accent" : ""}`} onClick={() => toggleCompare(p)} title="Compare" aria-label="Compare">⇄</button>
+              {user && <button className="btn sm" onClick={() => toggleWatch(p)} title={watched(p.id) ? "Saved — price alerts on" : "Save & get price-drop alerts"} aria-label="Save for price alerts" aria-pressed={watched(p.id)}>{watched(p.id) ? "♥" : "♡"}</button>}
             </div>
           </div>
         ))}

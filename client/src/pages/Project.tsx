@@ -131,6 +131,7 @@ export default function ProjectPage() {
           </div>
         </div>
         <div className="row no-print">
+          <Link className="btn sm accent" to={`/projects/${id}/present`}>▶ Present</Link>
           <button className="btn sm" onClick={() => setEditing(true)}>Rename</button>
           <button className="btn sm" onClick={duplicate}>Duplicate</button>
           <button className="btn sm danger" onClick={remove}>Delete</button>

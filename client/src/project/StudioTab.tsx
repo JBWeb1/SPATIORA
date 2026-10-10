@@ -7,6 +7,8 @@ import { uid } from "../components/ui";
 import { useCatalog, useMoney, useToast } from "../state";
 import type { LayoutItem, Product, Room } from "../types";
 import type { TabProps } from "./context";
+import { autoFurnish, checkLayout } from "./layoutTools";
+import { fmtDate } from "../components/ui";
 
 const GENERIC: Omit<LayoutItem, "id" | "x" | "z" | "rotation">[] = [
   { name: "Built-in cupboard", color: "#d9d2c5", w: 1.2, d: 0.6, h: 2.2 },
@@ -180,6 +182,35 @@ export default function StudioTab({ bundle, save }: TabProps) {
   const furnitureValue = useMemo(() => items.reduce((s, i) => s + (products.find((x) => x.id === i.productId)?.price ?? 0), 0), [items, products]);
 
   const update = (next: LayoutItem[]) => { setItems(next); setDirty(true); };
+  const issues = useMemo(() => checkLayout(items, room), [items, room]);
+  const [versions, setVersions] = useState<{ id: string; name: string; room: Room; layout: LayoutItem[]; createdAt: string }[]>([]);
+  const loadVersions = () => api.get<{ versions: typeof versions }>(`/projects/${p.id}/layout-versions`).then((r) => setVersions(r.versions)).catch(() => {});
+  useEffect(() => { loadVersions(); }, [p.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  const saveVersion = async () => {
+    const name = prompt("Name this layout version", `Layout ${versions.length + 1}`);
+    if (!name) return;
+    try {
+      await saveRef.current({ layout: items, room });
+      setDirty(false);
+      await api.post(`/projects/${p.id}/layout-versions`, { name });
+      loadVersions();
+      toast.info("Layout version saved");
+    } catch (err) { toast.error(err); }
+  };
+  const restoreVersion = (v: (typeof versions)[number]) => {
+    if (!confirm(`Restore "${v.name}"? Your current layout will be replaced (save it as a version first if you want to keep it).`)) return;
+    setRoom({ ...room, ...v.room });
+    update(v.layout);
+    setSelectedId(null);
+  };
+  const deleteVersion = async (id: string) => { await api.del(`/layout-versions/${id}`); loadVersions(); };
+  const furnish = () => {
+    if (items.length && !confirm("Replace the current layout with an auto-furnished one?")) return;
+    const next = autoFurnish(p.roomType, room, products);
+    if (!next.length) return toast.error(new Error("This room is too small for the starter layout — add items manually"));
+    update(next);
+    toast.info(`Auto-furnished with ${next.length} items for a ${p.roomType.toLowerCase()}`);
+  };
   const move = (id: string, x: number, z: number) => update(items.map((i) => (i.id === id ? clampToRoom({ ...i, x, z }, room) : i)));
   const patchSel = (patch: Partial<LayoutItem>) => selected && update(items.map((i) => (i.id === selected.id ? clampToRoom({ ...i, ...patch }, room) : i)));
   const add = (base: Omit<LayoutItem, "id" | "x" | "z" | "rotation">) => {
@@ -204,7 +235,35 @@ export default function StudioTab({ bundle, save }: TabProps) {
             <label className="field">Doors<input type="number" min={0} max={10} value={room.doors} onChange={(e) => setRoomField("doors", Math.max(0, Math.round(Number(e.target.value))))} /></label>
             <label className="field">Windows<input type="number" min={0} max={20} value={room.windows} onChange={(e) => setRoomField("windows", Math.max(0, Math.round(Number(e.target.value))))} /></label>
           </div>
-          <div className="tiny">{area.toFixed(1)} m² · furniture covers {Math.round((occupied / area) * 100)}% of the floor {occupied / area > 0.45 && <span className="chip warn">feels crowded</span>}</div>
+          <div className="tiny">{area.toFixed(1)} m² · furniture covers {Math.round((occupied / area) * 100)}% of the floor</div>
+        </div>
+
+        <div className="card stack">
+          <h3 style={{ margin: 0 }}>Smart tools</h3>
+          <div className="row">
+            <button className="btn sm accent" onClick={furnish}>✦ Auto-furnish</button>
+            <button className="btn sm" onClick={saveVersion}>Save version</button>
+            {items.length > 0 && <button className="btn sm ghost" onClick={() => { if (confirm("Remove all items?")) { update([]); setSelectedId(null); } }}>Clear</button>}
+          </div>
+          <div>
+            <div className="small" style={{ fontWeight: 600, marginBottom: 4 }}>Layout check {issues.length === 0 ? <span className="chip good">✓ No problems</span> : <span className={`chip ${issues.some((i) => i.level === "error") ? "bad" : "warn"}`}>{issues.length} to review</span>}</div>
+            {issues.slice(0, 6).map((iss, i) => (
+              <button key={i} className="btn ghost sm" style={{ justifyContent: "flex-start", whiteSpace: "normal", textAlign: "left", width: "100%" }} onClick={() => iss.itemIds[0] && setSelectedId(iss.itemIds[0])}>
+                {iss.level === "error" ? "⛔" : iss.level === "warn" ? "⚠️" : "ℹ️"} {iss.message}
+              </button>
+            ))}
+          </div>
+          {versions.length > 0 && (
+            <div>
+              <div className="small" style={{ fontWeight: 600, marginBottom: 4 }}>Saved versions</div>
+              {versions.slice(0, 6).map((v) => (
+                <div key={v.id} className="row between small" style={{ flexWrap: "nowrap" }}>
+                  <span>{v.name} <span className="tiny">· {v.layout.length} items · {fmtDate(v.createdAt)}</span></span>
+                  <span className="row" style={{ gap: 4, flexWrap: "nowrap" }}><button className="btn sm" onClick={() => restoreVersion(v)}>Restore</button><button className="btn ghost sm" onClick={() => deleteVersion(v.id)} aria-label="Delete version">✕</button></span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         <div className="card stack">

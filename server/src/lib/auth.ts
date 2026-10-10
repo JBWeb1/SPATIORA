@@ -1,9 +1,9 @@
 import type { NextFunction, Request, Response } from "express";
 import jwt from "jsonwebtoken";
-import { config } from "../config.js";
 import { get, parseJson } from "../db.js";
 import { HttpError } from "./http.js";
 import { PLANS, type PlanId } from "../data/catalog.js";
+import { config } from "../config.js";
 
 export interface UserRow {
   id: string;
@@ -43,6 +43,7 @@ export function publicUser(u: UserRow) {
     province: u.province,
     styleProfile: parseJson(u.style_profile, null),
     createdAt: u.created_at,
+    isAdmin: config.adminEmails.includes(u.email.toLowerCase()),
   };
 }
 
