@@ -5,6 +5,8 @@ import { fmtDate, Logo } from "../components/ui";
 import { useAuth, useCatalog, useMoney } from "../state";
 import type { Estimate, MoodItem } from "../types";
 import type { ProjectBundle } from "../project/context";
+import PlanView from "../project/PlanView";
+import { floorArea, openings } from "../../../server/src/shared/house";
 
 /** A client-ready presentation board for a project — print it or save as PDF. */
 export default function Present() {
@@ -55,6 +57,14 @@ export default function Present() {
             <div><h3>Signature elements</h3><ul className="small">{style.keywords.map((k) => <li key={k}>{k}</li>)}</ul></div>
             <div><h3>Materials</h3><ul className="small">{style.materials.map((k) => <li key={k}>{k}</li>)}</ul></div>
           </div>
+        </section>
+      )}
+
+      {p.house && p.house.rooms.length > 0 && (
+        <section>
+          <h2>Floor plan</h2>
+          <p className="muted">{p.house.rooms.length} spaces · {floorArea(p.house.rooms).toFixed(0)} m² under roof</p>
+          <PlanView rooms={p.house.rooms} ops={openings(p.house.rooms)} items={p.house.items} />
         </section>
       )}
 

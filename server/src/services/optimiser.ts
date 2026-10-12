@@ -1,5 +1,7 @@
 import { MATERIALS, type MaterialCategory } from "../data/catalog.js";
-import { estimate, type EstimateOptions, type Finishes, type RoomSpec } from "./estimator.js";
+import type { EstimateOptions, Finishes } from "./estimator.js";
+
+export type Evaluate = (finishes: Finishes, opts: EstimateOptions) => number;
 
 export interface Suggestion {
   kind: "swap" | "tier" | "contingency";
@@ -19,8 +21,8 @@ const KEYS: MaterialCategory[] = ["flooring", "wall", "ceiling", "tiles", "count
  * cheaper like-for-like material swaps (preferring ones that suit the chosen style),
  * a lower finish tier, and a leaner contingency.
  */
-export function optimise(room: RoomSpec, finishes: Finishes, opts: EstimateOptions, styleMaterials: string[] = []) {
-  const base = estimate(room, finishes, opts).totals.total;
+export function optimise(finishes: Finishes, opts: EstimateOptions, evaluate: Evaluate, styleMaterials: string[] = []) {
+  const base = evaluate(finishes, opts);
   const suggestions: Suggestion[] = [];
   const styleWords = styleMaterials.join(" ").toLowerCase();
 
@@ -30,7 +32,7 @@ export function optimise(room: RoomSpec, finishes: Finishes, opts: EstimateOptio
     if (!current) continue;
     const alternatives = MATERIALS.filter((m) => m.category === cat && m.id !== current.id && m.unit === current.unit && m.price < current.price);
     const scored = alternatives.map((alt) => {
-      const total = estimate(room, { ...finishes, [cat]: alt.id }, opts).totals.total;
+      const total = evaluate({ ...finishes, [cat]: alt.id }, opts);
       const fit = styleWords.split(/[^a-z]+/).some((w) => w.length > 3 && alt.name.toLowerCase().includes(w));
       return { alt, saving: Math.round(base - total), fit };
     }).filter((s) => s.saving > 0).sort((a, b) => Number(b.fit) - Number(a.fit) || b.saving - a.saving);
@@ -44,11 +46,11 @@ export function optimise(room: RoomSpec, finishes: Finishes, opts: EstimateOptio
 
   if (opts.quality !== "budget") {
     const lower = opts.quality === "premium" ? "standard" : "budget";
-    const total = estimate(room, finishes, { ...opts, quality: lower }).totals.total;
+    const total = evaluate(finishes, { ...opts, quality: lower });
     if (base - total > 0) suggestions.push({ kind: "tier", label: `Use ${lower} finish grades`, saving: Math.round(base - total), styleFit: true });
   }
   if (opts.contingency > 0.1) {
-    const total = estimate(room, finishes, { ...opts, contingency: 0.1 }).totals.total;
+    const total = evaluate(finishes, { ...opts, contingency: 0.1 });
     suggestions.push({ kind: "contingency", label: "Reduce contingency to 10% (keep at least 10%)", saving: Math.round(base - total), styleFit: true });
   }
 
@@ -57,6 +59,6 @@ export function optimise(room: RoomSpec, finishes: Finishes, opts: EstimateOptio
   const seen = new Set<string>();
   const combo = suggestions.filter((s) => s.kind === "swap" && !seen.has(s.category!) && seen.add(s.category!));
   const comboPatch = Object.assign({}, ...combo.map((s) => s.patch));
-  const comboTotal = combo.length ? estimate(room, { ...finishes, ...comboPatch }, opts).totals.total : base;
+  const comboTotal = combo.length ? evaluate({ ...finishes, ...comboPatch }, opts) : base;
   return { currentTotal: base, suggestions, bestCombination: { patch: comboPatch, total: comboTotal, saving: Math.round(base - comboTotal) } };
 }

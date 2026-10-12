@@ -162,10 +162,14 @@ export interface Project {
   moodboard: MoodItem[];
   tags: string[];
   shareToken: string | null;
+  house: House | null;
   createdAt: string;
   updatedAt: string;
   designCount?: number;
 }
+
+export type { House, HouseRoom, HouseItem, Opening } from "../../server/src/shared/house";
+import type { House } from "../../server/src/shared/house";
 
 export interface Design {
   id: string;
@@ -226,6 +230,7 @@ export interface Estimate {
   totals: { materials: number; labour: number; services: number; subtotal: number; contingency: number; vat: number; total: number };
   range: { low: number; high: number };
   assumptions: string[];
+  rooms?: { id: string; name: string; type: string; area: number; total: number }[];
 }
 
 export interface Client {

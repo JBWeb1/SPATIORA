@@ -4,6 +4,7 @@ import { api } from "../api";
 import { useCatalog, useMoney, useToast } from "../state";
 import type { Project } from "../types";
 import type { ProjectBundle } from "../project/context";
+import { floorArea } from "../../../server/src/shared/house";
 import { STATUS_LABEL } from "./Dashboard";
 import RedesignTab from "../project/RedesignTab";
 import MaterialsTab from "../project/MaterialsTab";
@@ -16,10 +17,12 @@ import ShareTab from "../project/ShareTab";
 
 // three.js is only downloaded when the 3D Studio is opened.
 const StudioTab = lazy(() => import("../project/StudioTab"));
+const HouseTab = lazy(() => import("../project/HouseTab"));
 
 const TABS = [
   ["redesign", "✦ AI Redesign"],
-  ["studio", "▣ 3D Studio"],
+  ["house", "🏠 Whole house"],
+  ["studio", "▣ 3D Room"],
   ["materials", "◧ Materials"],
   ["assistant", "✎ Assistant"],
   ["estimate", "R Estimate"],
@@ -32,7 +35,7 @@ const TABS = [
 export default function ProjectPage() {
   const { id = "" } = useParams();
   const [params, setParams] = useSearchParams();
-  const tab = params.get("tab") ?? "redesign";
+  const tabParam = params.get("tab");
   const catalog = useCatalog();
   const money = useMoney();
   const toast = useToast();
@@ -92,6 +95,7 @@ export default function ProjectPage() {
 
   if (!bundle) return <div className="container section muted">Loading project…</div>;
   const p = bundle.project;
+  const tab = tabParam ?? (p.house?.rooms.length || p.roomType === "Whole home" ? "house" : "redesign");
   const goTo = (t: string) => setParams({ tab: t });
   const props = { bundle, setBundle, save, reload, goTo };
 
@@ -125,7 +129,9 @@ export default function ProjectPage() {
             <select value={p.status} onChange={(e) => save({ status: e.target.value as Project["status"] })} style={{ width: "auto" }}>
               {Object.entries(STATUS_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
             </select>
-            <span>{p.room.length} × {p.room.width} m · {(p.room.length * p.room.width).toFixed(1)} m²</span>
+            {p.house?.rooms.length
+              ? <span>{p.house.rooms.length} spaces · {floorArea(p.house.rooms).toFixed(0)} m² house</span>
+              : <span>{p.room.length} × {p.room.width} m · {(p.room.length * p.room.width).toFixed(1)} m²</span>}
             {live && <span title="This page updates itself when collaborators comment or the project changes elsewhere"><span className="live-dot" />Live</span>}
             <span>Budget: <input type="number" min={0} step={1000} defaultValue={money.fromZar(p.budget) || ""} placeholder="not set" style={{ width: 120 }} onBlur={(e) => save({ budget: money.toZar(Number(e.target.value) || 0) })} /> {money.code}</span>
           </div>
@@ -144,6 +150,7 @@ export default function ProjectPage() {
 
       <div style={{ paddingBottom: 48 }}>
         {tab === "redesign" && <RedesignTab {...props} />}
+        {tab === "house" && <Suspense fallback={<p className="muted">Loading house designer…</p>}><HouseTab {...props} /></Suspense>}
         {tab === "studio" && <Suspense fallback={<p className="muted">Loading 3D Studio…</p>}><StudioTab {...props} /></Suspense>}
         {tab === "materials" && <MaterialsTab {...props} />}
         {tab === "assistant" && <AssistantTab {...props} />}

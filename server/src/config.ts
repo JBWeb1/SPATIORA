@@ -43,6 +43,9 @@ export const config = {
   images: {
     replicateToken: env.REPLICATE_API_TOKEN || "",
     replicateVersion: env.REPLICATE_MODEL_VERSION || "",
+    // Interior image-to-image model; its latest version is looked up automatically.
+    replicateModel: env.REPLICATE_MODEL || "adirik/interior-design",
+    replicateBase: (env.REPLICATE_API_BASE || "https://api.replicate.com/v1").replace(/\/$/, ""),
     providerUrl: env.IMAGE_PROVIDER_URL || "",
     providerKey: env.IMAGE_PROVIDER_KEY || "",
   },

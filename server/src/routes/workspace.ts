@@ -5,7 +5,7 @@ import { currentUser, requireAuth, requirePro } from "../lib/auth.js";
 import { notFound } from "../lib/http.js";
 import { ownedProject, serializeProject, shoppingList } from "../lib/projects.js";
 import { CONTRACTORS, VAT_RATE } from "../data/catalog.js";
-import { estimate } from "../services/estimator.js";
+import { estimateProject } from "../lib/estimateProject.js";
 import { notify } from "../services/notifications.js";
 
 export const workspaceRouter = Router();
@@ -149,12 +149,7 @@ workspaceRouter.post("/quotes/from-project/:projectId", requirePro, (req, res) =
   const user = currentUser(req);
   const p = ownedProject(req, String(req.params.projectId));
   const sp = serializeProject(p);
-  const f = sp.finishes as Record<string, string | number>;
-  const est = estimate(sp.room, {
-    flooring: f.flooring as string, wall: f.wall as string, ceiling: f.ceiling as string, tiles: f.tiles as string,
-    tiledArea: Number(f.tiledArea ?? 0), countertop: f.countertop as string, countertopLength: Number(f.countertopLength ?? 0),
-    cabinetry: f.cabinetry as string, cabinetryLength: Number(f.cabinetryLength ?? 0),
-  }, { quality: "standard", province: user.province, includeDemolition: true, electricalPoints: 4, plumbingPoints: 0, contingency: 0 });
+  const est = estimateProject(sp, { quality: "standard", province: user.province, includeDemolition: true, electricalPoints: 4, plumbingPoints: 0, contingency: 0 });
   const items = [
     ...est.lines.map((l) => ({ description: l.item, quantity: l.quantity, unit: l.unit, unitPrice: l.unitCost, category: l.group })),
     ...shoppingList(p.id).map((s) => ({ description: `${s.product!.name} (${s.product!.retailer})`, quantity: s.quantity, unit: "ea", unitPrice: Math.round((s.product!.price / (1 + VAT_RATE)) * 100) / 100, category: "Furniture & fixtures" })),

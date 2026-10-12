@@ -4,6 +4,7 @@ import { PRODUCTS } from "../data/catalog.js";
 import { currentUser } from "./auth.js";
 import { notFound } from "./http.js";
 import type { ProjectContext } from "../services/assistant.js";
+import type { House } from "../shared/house.js";
 
 export interface ProjectRow {
   id: string;
@@ -23,6 +24,7 @@ export interface ProjectRow {
   moodboard: string;
   tags: string;
   share_token: string | null;
+  house: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -61,6 +63,7 @@ export function serializeProject(p: ProjectRow) {
     moodboard: parseJson<unknown[]>(p.moodboard, []),
     tags: parseJson<string[]>(p.tags, []),
     shareToken: p.share_token,
+    house: parseJson<House | null>(p.house, null),
     createdAt: p.created_at,
     updatedAt: p.updated_at,
   };

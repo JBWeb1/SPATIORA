@@ -7,6 +7,18 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: "1.3.0",
+    date: "2026-10-12",
+    highlights: [
+      "Whole-house design: lay out every room on one floor plan — walls, doors and windows are built for you.",
+      "Walk through your house at eye level in 3D (keyboard, mouse or on-screen pad).",
+      "Realistic 3D: modelled sofas, beds, kitchens, bathrooms, plants and lights, with wood, tile, marble and fabric textures.",
+      "Start from real sample South African homes — furnished, costed and ready to redesign.",
+      "Photo-real AI renders: send any 3D view to the AI to turn it into a realistic photo.",
+      "Room-by-room renovation estimates for the whole house.",
+    ],
+  },
+  {
     version: "1.2.0",
     date: "2026-10-10",
     highlights: [

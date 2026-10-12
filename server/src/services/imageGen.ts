@@ -190,18 +190,41 @@ async function fetchAsBuffer(url: string): Promise<{ data: Buffer; mime: string 
   return { mime: res.headers.get("content-type")?.split(";")[0] ?? "image/png", data: Buffer.from(await res.arrayBuffer()) };
 }
 
+let cachedVersion: { model: string; id: string } | null = null;
+
+/** Use REPLICATE_MODEL_VERSION if pinned, otherwise the model's latest published version. */
+async function replicateVersion(headers: Record<string, string>): Promise<string> {
+  if (config.images.replicateVersion) return config.images.replicateVersion;
+  if (cachedVersion?.model === config.images.replicateModel) return cachedVersion.id;
+  const res = await fetch(`${config.images.replicateBase}/models/${config.images.replicateModel}`, { headers });
+  if (!res.ok) throw new Error(`Replicate model lookup failed (${res.status})`);
+  const body = (await res.json()) as { latest_version?: { id: string } };
+  if (!body.latest_version?.id) throw new Error(`Replicate model ${config.images.replicateModel} has no published version`);
+  cachedVersion = { model: config.images.replicateModel, id: body.latest_version.id };
+  return cachedVersion.id;
+}
+
 async function replicate(input: RedesignInput, prompt: string, negative: string): Promise<{ data: Buffer; mime: string }> {
   if (!input.source) throw new Error("Replicate redesign requires a room photo");
-  const headers = { Authorization: `Bearer ${config.images.replicateToken}`, "Content-Type": "application/json", Prefer: "wait" };
-  const create = await fetch("https://api.replicate.com/v1/predictions", {
+  const headers = { Authorization: `Bearer ${config.images.replicateToken}`, "Content-Type": "application/json" };
+  const version = await replicateVersion(headers);
+  // Keep more of the original room when "preserve layout" is on; vary the seed per variation.
+  const strength = Math.min(0.95, Math.max(0.45, (input.preferences.intensity ?? 0.6) * (input.preferences.preserveLayout === false ? 1.05 : 0.95) + 0.25));
+  const create = await fetch(`${config.images.replicateBase}/predictions`, {
     method: "POST",
-    headers,
+    headers: { ...headers, Prefer: "wait=60" },
     body: JSON.stringify({
-      version: config.images.replicateVersion,
-      input: { image: `data:${input.source.mime};base64,${input.source.data.toString("base64")}`, prompt, negative_prompt: negative },
+      version,
+      input: {
+        image: `data:${input.source.mime};base64,${input.source.data.toString("base64")}`,
+        prompt, negative_prompt: negative,
+        prompt_strength: Math.round(strength * 100) / 100,
+        guidance_scale: 15, num_inference_steps: 50,
+        seed: 1000 + input.variant * 7919,
+      },
     }),
   });
-  if (!create.ok) throw new Error(`Replicate error ${create.status}: ${await create.text()}`);
+  if (!create.ok) throw new Error(`Replicate error ${create.status}: ${(await create.text()).slice(0, 300)}`);
   let prediction = (await create.json()) as { status: string; output: unknown; error?: string; urls: { get: string } };
   const started = Date.now();
   while (!["succeeded", "failed", "canceled"].includes(prediction.status)) {
@@ -237,7 +260,7 @@ async function customProvider(input: RedesignInput, prompt: string, negative: st
 
 export function activeImageProvider(): RedesignResult["provider"] {
   if (config.images.providerUrl) return "custom";
-  if (config.images.replicateToken && config.images.replicateVersion) return "replicate";
+  if (config.images.replicateToken) return "replicate";
   return "studio-preview";
 }
 

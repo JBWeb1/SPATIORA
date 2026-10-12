@@ -7,7 +7,8 @@ import type { Estimate } from "../types";
 const FEATURES = [
   ["✦", "AI Interior Designer", "Turn a photo of your room into realistic redesigns in any style — while keeping your real layout."],
   ["⌂", "Room Design Studio", "Living rooms, kitchens, bathrooms, bedrooms or the whole home, with unlimited variations to compare."],
-  ["▣", "3D Home Builder", "Set your room's dimensions, drag real furniture onto the plan and walk around it in 3D."],
+  ["▣", "3D Home Builder", "Design a whole house on one floor plan — walls, doors and windows build themselves — then walk through it at eye level with realistic furniture and finishes."],
+  ["🏠", "Real sample homes", "Open a ready-made South African home (family house, townhouse, apartment or starter home), already furnished and costed."],
   ["◧", "Material Editor", "Swap flooring, paint, tiles, countertops and cabinets individually and see them update instantly."],
   ["✎", "AI Design Assistant", "Photo-aware advice on layouts, palettes, lighting and materials, tuned to South African homes."],
   ["R", "Renovation Calculator", "Quantities, labour and VAT-inclusive costs in rand — or any of 9 currencies — for your exact room."],

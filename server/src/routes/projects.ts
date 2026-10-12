@@ -9,7 +9,8 @@ import { readUpload, saveImage, sniffMime } from "../lib/images.js";
 import { DEFAULT_ROOM, ownedProject, serializeDesign, serializeProject, shoppingList, touch, type DesignRow, type ProjectRow } from "../lib/projects.js";
 import { CURRENCIES, PLANS, PRODUCTS, ROOM_TYPES, STYLES } from "../data/catalog.js";
 import { generateRedesign, type RedesignPreferences } from "../services/imageGen.js";
-import { estimate } from "../services/estimator.js";
+import { estimateProject } from "../lib/estimateProject.js";
+import { HOUSE_TEMPLATES } from "../data/houses.js";
 
 export const projectsRouter = Router();
 projectsRouter.use(requireAuth);
@@ -40,6 +41,18 @@ const moodItem = z.object({
   label: z.string().max(120).optional(),
 });
 
+const houseRoom = z.object({
+  id: z.string().max(40), name: z.string().trim().min(1).max(60), type: z.enum(ROOM_TYPES),
+  x: z.number().min(-200).max(200), z: z.number().min(-200).max(200),
+  length: z.number().min(0.8).max(40), width: z.number().min(0.8).max(40),
+  floor: z.string().max(40).nullable().optional(), wall: z.string().max(40).nullable().optional(), ensuite: z.boolean().optional(),
+});
+const houseSchema = z.object({
+  height: z.number().min(2.2).max(6),
+  rooms: z.array(houseRoom).max(40),
+  items: z.array(layoutItem.extend({ roomId: z.string().max(40).optional() })).max(600),
+});
+
 const projectPatch = z.object({
   name: z.string().trim().min(1).max(120),
   roomType: z.enum(ROOM_TYPES),
@@ -53,6 +66,7 @@ const projectPatch = z.object({
   moodboard: z.array(moodItem).max(100),
   tags: z.array(z.string().max(30)).max(12),
   clientId: z.string().nullable(),
+  house: houseSchema.nullable(),
 }).partial();
 
 // ---------------------------------- Projects ----------------------------------------
@@ -94,6 +108,31 @@ projectsRouter.post("/projects", (req, res) => {
   res.status(201).json({ project: serializeProject(get<ProjectRow>("SELECT * FROM projects WHERE id = ?", id)!) });
 });
 
+// ------------------------------ Sample homes ----------------------------------------
+
+projectsRouter.get("/house-templates", (_req, res) => {
+  res.json({ templates: HOUSE_TEMPLATES.map(({ house, finishes: _f, ...t }) => ({ ...t, house, area: Math.round(house.rooms.filter((r) => r.type !== "Patio & outdoor").reduce((s, r) => s + r.length * r.width, 0)) })) });
+});
+
+projectsRouter.post("/projects/from-template", (req, res) => {
+  const user = currentUser(req);
+  const { templateId, name } = z.object({ templateId: z.string(), name: z.string().trim().max(120).optional() }).parse(req.body);
+  const t = HOUSE_TEMPLATES.find((x) => x.id === templateId);
+  if (!t) throw notFound("Sample home");
+  const count = get<{ n: number }>("SELECT COUNT(*) AS n FROM projects WHERE user_id = ?", user.id)!.n;
+  const limit = PLANS[user.plan]?.maxProjects ?? PLANS.free.maxProjects;
+  if (count >= limit) throw new HttpError(402, `Your ${PLANS[user.plan].name} plan allows ${limit} projects. Upgrade to add more.`, "upgrade_required");
+  const id = newId();
+  const main = t.house.rooms.find((r) => r.type === "Living room") ?? t.house.rooms[0];
+  run(
+    `INSERT INTO projects (id, user_id, name, room_type, description, budget, currency, room, finishes, house, tags) VALUES (?, ?, ?, 'Whole home', ?, ?, ?, ?, ?, ?, ?)`,
+    id, user.id, name || t.name, `${t.description} (${t.location})`, t.budget, user.currency,
+    JSON.stringify({ ...DEFAULT_ROOM, length: main.length, width: main.width, height: t.house.height }),
+    JSON.stringify(t.finishes), JSON.stringify({ ...t.house, items: [] }), JSON.stringify(["sample home", t.location.split(",").pop()!.trim()]),
+  );
+  res.status(201).json({ project: serializeProject(get<ProjectRow>("SELECT * FROM projects WHERE id = ?", id)!) });
+});
+
 projectsRouter.get("/projects/:id", (req, res) => {
   const p = ownedProject(req, String(req.params.id));
   res.json({
@@ -122,7 +161,7 @@ projectsRouter.patch("/projects/:id", (req, res) => {
   if (b.clientId && !get("SELECT id FROM clients WHERE id = ? AND user_id = ?", b.clientId, user.id)) throw notFound("Client");
   const cur = serializeProject(p);
   run(
-    `UPDATE projects SET name = ?, room_type = ?, description = ?, status = ?, budget = ?, currency = ?, room = ?, layout = ?, finishes = ?, moodboard = ?, tags = ?, client_id = ?, updated_at = datetime('now') WHERE id = ?`,
+    `UPDATE projects SET name = ?, room_type = ?, description = ?, status = ?, budget = ?, currency = ?, room = ?, layout = ?, finishes = ?, moodboard = ?, tags = ?, client_id = ?, house = ?, updated_at = datetime('now') WHERE id = ?`,
     b.name ?? cur.name,
     b.roomType ?? cur.roomType,
     b.description === undefined ? cur.description : b.description,
@@ -135,6 +174,7 @@ projectsRouter.patch("/projects/:id", (req, res) => {
     JSON.stringify(b.moodboard ?? cur.moodboard),
     JSON.stringify(b.tags ?? cur.tags),
     b.clientId === undefined ? cur.clientId : b.clientId,
+    b.house === undefined ? p.house : b.house ? JSON.stringify(b.house) : null,
     p.id,
   );
   res.json({ project: serializeProject(get<ProjectRow>("SELECT * FROM projects WHERE id = ?", p.id)!) });
@@ -154,8 +194,8 @@ projectsRouter.post("/projects/:id/duplicate", (req, res) => {
   const id = newId();
   tx(() => {
     run(
-      `INSERT INTO projects (id, user_id, client_id, name, room_type, description, status, budget, currency, source_image, cover_image, room, layout, finishes, moodboard, tags)
-       SELECT ?, user_id, client_id, name || ' (copy)', room_type, description, 'planning', budget, currency, source_image, cover_image, room, layout, finishes, moodboard, tags FROM projects WHERE id = ?`,
+      `INSERT INTO projects (id, user_id, client_id, name, room_type, description, status, budget, currency, source_image, cover_image, room, layout, finishes, moodboard, tags, house)
+       SELECT ?, user_id, client_id, name || ' (copy)', room_type, description, 'planning', budget, currency, source_image, cover_image, room, layout, finishes, moodboard, tags, house FROM projects WHERE id = ?`,
       id, p.id,
     );
     run(
@@ -280,12 +320,7 @@ projectsRouter.post("/projects/:id/estimate", (req, res) => {
   const p = ownedProject(req, String(req.params.id));
   const opts = estimateOptions.parse(req.body ?? {});
   const sp = serializeProject(p);
-  const f = sp.finishes as Record<string, string | number | undefined>;
-  const result = estimate(sp.room, {
-    flooring: f.flooring as string, wall: f.wall as string, ceiling: f.ceiling as string, tiles: f.tiles as string,
-    tiledArea: Number(f.tiledArea ?? 0), countertop: f.countertop as string, countertopLength: Number(f.countertopLength ?? 0),
-    cabinetry: f.cabinetry as string, cabinetryLength: Number(f.cabinetryLength ?? 0),
-  }, { ...opts, province: currentUser(req).province });
+  const result = estimateProject(sp, { ...opts, province: currentUser(req).province });
   const furniture = shoppingList(p.id).reduce((s, i) => s + i.product!.price * i.quantity, 0);
   res.json({ estimate: result, furnitureTotal: furniture, budget: sp.budget, grandTotal: result.totals.total + furniture });
 });

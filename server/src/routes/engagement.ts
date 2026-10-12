@@ -6,6 +6,7 @@ import { notFound } from "../lib/http.js";
 import { ownedProject, serializeProject } from "../lib/projects.js";
 import { PRODUCTS, STYLES } from "../data/catalog.js";
 import { optimise } from "../services/optimiser.js";
+import { estimateProject, finishesOf } from "../lib/estimateProject.js";
 
 export const engagementRouter = Router();
 engagementRouter.use(requireAuth);
@@ -90,12 +91,8 @@ engagementRouter.post("/projects/:id/optimise", (req, res) => {
     contingency: z.number().min(0).max(0.3).default(0.1),
   }).parse(req.body ?? {});
   const sp = serializeProject(p);
-  const f = sp.finishes as Record<string, string | number | undefined>;
-  const style = STYLES.find((s) => s.id === f.style);
-  const result = optimise(sp.room, {
-    flooring: f.flooring as string, wall: f.wall as string, ceiling: f.ceiling as string, tiles: f.tiles as string,
-    tiledArea: Number(f.tiledArea ?? 0), countertop: f.countertop as string, countertopLength: Number(f.countertopLength ?? 0),
-    cabinetry: f.cabinetry as string, cabinetryLength: Number(f.cabinetryLength ?? 0),
-  }, { ...opts, province: currentUser(req).province }, style?.materials ?? []);
+  const style = STYLES.find((s) => s.id === (sp.finishes as Record<string, unknown>).style);
+  const fullOpts = { ...opts, province: currentUser(req).province };
+  const result = optimise(finishesOf(sp), fullOpts, (f, o) => estimateProject(sp, o, f).totals.total, style?.materials ?? []);
   res.json(result);
 });

@@ -24,6 +24,18 @@ It is built for South Africa first (rand, 15% VAT, provincial pricing, load-shed
 | **Professional Workspace** | Client CRM, quotations generated in one click from a project's estimate and shopping list, markup/VAT/margin tracking, a draft → sent → accepted pipeline and printable quotes. |
 | **Project Library** | Search and filter projects by status, duplicate and delete them, and see a dashboard of usage, budgets, upcoming tasks and feedback. |
 
+### Real houses (v1.3)
+
+- **Whole-house designer.** Lay out a full home room by room: lounge, kitchen, bedrooms, bathrooms, en-suites, passages and patios.
+  - Doors, open-plan openings, windows and the front door are placed automatically from how the rooms touch. Passages get doors, living areas open into each other, and an en-suite opens only into its bedroom.
+  - Rooms are dragged and snapped on a 2D floor plan with door swings and windows drawn in.
+- **Realistic 3D.** Furniture is modelled in detail: sofas with cushions, beds with headboards and linen, kitchen runs with wall units, hob and sink, baths, vanities, toilets, plants and lights. Surfaces get real textures such as timber planks, tiles, terrazzo, marble, carpet and limewash. Walls have skirtings, windows have frames and glass, and doors have leaves that swing into the rooms. You can view the house as a dollhouse with full or cut-away walls.
+- **Walk-through.** Explore the house at eye height. Drag to look, use WASD or the arrow keys to move (or the on-screen pad on a phone), and walls stop you.
+- **Real sample homes.** Start from typical South African houses: a 3-bed family home in Centurion, a 2-bed townhouse in Durbanville, a 1-bed apartment in Umhlanga and a 45 m² starter home in Soshanguve. Each one comes furnished, with a realistic budget and finishes.
+- **Whole-house furnishing and checks.** Auto-furnish fills every room while keeping doorways and windows clear. The house check flags overlapping rooms, rooms with no way in and layout problems.
+- **Room-by-room estimate.** The renovation calculator costs every room with its own finishes, adding kitchen and bathroom extras, and shows a per-room breakdown.
+- **Photo-real AI renders.** Capture any 3D view or walk-through angle and send it to the AI designer as the project photo. With `REPLICATE_API_TOKEN` set, Replicate produces photorealistic redesigns. This is pay-per-image.
+
 ### Features added on top of the original brief
 
 - **Style DNA quiz.** A 6-question quiz that builds your style profile and palette. It personalises the default style, colours and product picks.
@@ -108,7 +120,7 @@ Run the API tests with `npm test`, and typecheck everything with `npm run typech
 | `JWT_SECRET` | Signs login tokens. **Required in production** (24+ characters). |
 | `DATA_DIR` | Location of the SQLite database and uploaded images (default `./data`). |
 | `ANTHROPIC_API_KEY` | Turns on Claude for the assistant, photo analysis and briefs. `CLAUDE_MODEL` defaults to `claude-opus-5-5`. |
-| `REPLICATE_API_TOKEN` + `REPLICATE_MODEL_VERSION` | Photorealistic redesigns through any Replicate image-to-image interior model that accepts `image`, `prompt` and `negative_prompt`. |
+| `REPLICATE_API_TOKEN` | Photorealistic redesigns through Replicate (billed per image by Replicate). `REPLICATE_MODEL` defaults to `adirik/interior-design` and its latest version is resolved automatically. Set `REPLICATE_MODEL_VERSION` to pin a version. Any image-to-image interior model that accepts `image`, `prompt` and `negative_prompt` works. |
 | `FX_RATES_URL`, `FX_REFRESH_HOURS` | Exchange-rate feed quoted per 1 ZAR (or any base that includes ZAR), and how often to refresh it. Set the URL to `off` to keep the built-in rates. |
 | `CATALOG_FEED_URL`, `CATALOG_REFRESH_HOURS` | Optional partner product feed: `{ "products": [...] }` containing full products or `{ "id", "price" }` updates, plus `"discontinued": true` to remove an item. |
 | `ADMIN_EMAILS` | Comma-separated emails that can open the business dashboard at `/admin`. |

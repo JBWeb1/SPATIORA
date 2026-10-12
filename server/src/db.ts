@@ -181,6 +181,10 @@ CREATE INDEX IF NOT EXISTS idx_comments_project ON comments(project_id);
 CREATE INDEX IF NOT EXISTS idx_tasks_project ON tasks(project_id);
 `);
 
+// Lightweight migrations for databases created by earlier versions.
+const projectCols = (db.prepare("PRAGMA table_info(projects)").all() as { name: string }[]).map((c) => c.name);
+if (!projectCols.includes("house")) db.exec("ALTER TABLE projects ADD COLUMN house TEXT");
+
 export const newId = () => crypto.randomUUID();
 
 type Row = Record<string, unknown>;

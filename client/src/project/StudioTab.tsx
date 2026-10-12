@@ -1,7 +1,7 @@
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
-import { Canvas, type ThreeEvent } from "@react-three/fiber";
-import { ContactShadows, Edges, OrbitControls } from "@react-three/drei";
-import * as THREE from "three";
+import HouseScene from "./three/HouseScene";
+import { sendViewToAi } from "./sendToAi";
+import type { HouseRoom, Opening } from "../types";
 import { api } from "../api";
 import { uid } from "../components/ui";
 import { useCatalog, useMoney, useToast } from "../state";
@@ -28,84 +28,6 @@ function footprint(it: LayoutItem) {
 function clampToRoom(it: LayoutItem, room: Room): LayoutItem {
   const f = footprint(it);
   return { ...it, x: clamp(it.x, -room.length / 2 + f.w / 2, room.length / 2 - f.w / 2), z: clamp(it.z, -room.width / 2 + f.d / 2, room.width / 2 - f.d / 2) };
-}
-
-function RoomShell({ room, floor, wall, onFloorMove, onFloorUp }: { room: Room; floor: string; wall: string; onFloorMove: (p: THREE.Vector3) => void; onFloorUp: () => void }) {
-  const windows = Array.from({ length: room.windows }, (_, i) => i);
-  return (
-    <group>
-      <mesh rotation-x={-Math.PI / 2} position-y={0.002} receiveShadow onPointerMove={(e) => onFloorMove(e.point)} onPointerUp={onFloorUp}>
-        <planeGeometry args={[room.length, room.width]} />
-        <meshStandardMaterial color={floor} roughness={0.75} />
-      </mesh>
-      <mesh position={[0, room.height / 2, 0]} receiveShadow>
-        <boxGeometry args={[room.length, room.height, room.width]} />
-        <meshStandardMaterial color={wall} side={THREE.BackSide} roughness={0.95} />
-      </mesh>
-      {windows.map((i) => (
-        <mesh key={i} position={[(-room.length / 2) + room.length * ((i + 1) / (room.windows + 1)), room.height * 0.55, -room.width / 2 + 0.01]}>
-          <planeGeometry args={[Math.min(1.4, room.length / (room.windows + 1) * 0.8), room.height * 0.45]} />
-          <meshStandardMaterial color="#cfe6f2" emissive="#cfe6f2" emissiveIntensity={0.35} />
-        </mesh>
-      ))}
-      {Array.from({ length: room.doors }, (_, i) => (
-        <mesh key={`d${i}`} position={[-room.length / 2 + 0.01, 1.03, -room.width / 2 + 1 + i * 1.4]} rotation-y={Math.PI / 2}>
-          <planeGeometry args={[0.85, 2.06]} />
-          <meshStandardMaterial color="#8a6e4f" />
-        </mesh>
-      ))}
-    </group>
-  );
-}
-
-function Furniture({ item, selected, onSelect, onDragStart }: { item: LayoutItem; selected: boolean; onSelect: () => void; onDragStart: () => void }) {
-  return (
-    <mesh
-      position={[item.x, item.h / 2, item.z]}
-      rotation-y={(item.rotation * Math.PI) / 180}
-      castShadow
-      receiveShadow
-      onPointerDown={(e: ThreeEvent<PointerEvent>) => { e.stopPropagation(); onSelect(); onDragStart(); }}
-    >
-      <boxGeometry args={[item.w, item.h, item.d]} />
-      <meshStandardMaterial color={item.color} roughness={0.6} />
-      {selected && <Edges color="#c9a46a" lineWidth={2} />}
-    </mesh>
-  );
-}
-
-function Scene3D({ room, items, selectedId, floor, wall, light, onSelect, onMove }: {
-  room: Room; items: LayoutItem[]; selectedId: string | null; floor: string; wall: string; light: { sun: number; warmth: number; lamps: boolean };
-  onSelect: (id: string | null) => void; onMove: (id: string, x: number, z: number) => void;
-}) {
-  const [dragId, setDragId] = useState<string | null>(null);
-  useEffect(() => {
-    const up = () => setDragId(null);
-    window.addEventListener("pointerup", up);
-    return () => window.removeEventListener("pointerup", up);
-  }, []);
-  const sunAngle = (light.sun / 24) * Math.PI * 2 - Math.PI / 2;
-  const daylight = Math.max(0, Math.sin(((light.sun - 6) / 12) * Math.PI));
-  const lampColor = new THREE.Color().setHSL(0.09, 0.8 * light.warmth, 0.7);
-  return (
-    <Canvas shadows camera={{ position: [room.length * 0.9, room.height * 1.8, room.width * 1.3], fov: 45 }} onPointerMissed={() => onSelect(null)}>
-      <color attach="background" args={[daylight > 0.1 ? "#d9e3ea" : "#1d2229"]} />
-      <ambientLight intensity={0.25 + daylight * 0.45} />
-      <directionalLight
-        castShadow
-        position={[Math.cos(sunAngle) * 8, 6 + daylight * 4, Math.sin(sunAngle) * 6 - 4]}
-        intensity={daylight * 1.6}
-        shadow-mapSize={[1024, 1024]}
-      />
-      {light.lamps && <pointLight position={[0, room.height - 0.3, 0]} intensity={8} distance={Math.max(room.length, room.width) * 1.6} color={lampColor} castShadow />}
-      <RoomShell room={room} floor={floor} wall={wall} onFloorMove={(p) => dragId && onMove(dragId, p.x, p.z)} onFloorUp={() => setDragId(null)} />
-      {items.map((it) => (
-        <Furniture key={it.id} item={it} selected={it.id === selectedId} onSelect={() => onSelect(it.id)} onDragStart={() => setDragId(it.id)} />
-      ))}
-      <ContactShadows position={[0, 0.005, 0]} opacity={0.35} scale={Math.max(room.length, room.width) * 1.2} blur={2} far={3} />
-      <OrbitControls enabled={!dragId} target={[0, 0.8, 0]} maxPolarAngle={Math.PI / 2.05} minDistance={2} maxDistance={30} />
-    </Canvas>
-  );
 }
 
 function Plan2D({ room, items, selectedId, floor, onSelect, onMove }: { room: Room; items: LayoutItem[]; selectedId: string | null; floor: string; onSelect: (id: string | null) => void; onMove: (id: string, x: number, z: number) => void }) {
@@ -151,7 +73,7 @@ function Plan2D({ room, items, selectedId, floor, onSelect, onMove }: { room: Ro
   );
 }
 
-export default function StudioTab({ bundle, save }: TabProps) {
+export default function StudioTab({ bundle, save, setBundle, goTo }: TabProps) {
   const catalog = useCatalog();
   const money = useMoney();
   const toast = useToast();
@@ -160,7 +82,7 @@ export default function StudioTab({ bundle, save }: TabProps) {
   const [items, setItems] = useState<LayoutItem[]>(p.layout);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [view, setView] = useState<"3d" | "plan" | "split">("split");
-  const [light, setLight] = useState({ sun: 14, warmth: 0.6, lamps: true });
+  const [light, setLight] = useState({ sun: 14, lamps: true });
   const [products, setProducts] = useState<Product[]>([]);
   const [category, setCategory] = useState("Furniture");
   const [dirty, setDirty] = useState(false);
@@ -176,6 +98,24 @@ export default function StudioTab({ bundle, save }: TabProps) {
     return () => clearTimeout(t);
   }, [items, room, dirty]);
 
+  const capture = useRef<(() => string) | null>(null);
+  const [sending, setSending] = useState(false);
+  // The single room as a one-room "house": windows on the far (north) wall, doors on the left wall.
+  const sceneRooms = useMemo<HouseRoom[]>(() => [{ id: "room", name: p.name, type: p.roomType, x: -room.length / 2, z: -room.width / 2, length: room.length, width: room.width }], [p.name, p.roomType, room.length, room.width]);
+  const sceneOps = useMemo<Opening[]>(() => [
+    ...Array.from({ length: room.windows }, (_, i) => ({ kind: "window" as const, roomId: "room", side: "n" as const, x: -room.length / 2 + room.length * ((i + 1) / (room.windows + 1)), z: -room.width / 2, width: Math.min(1.4, (room.length / (room.windows + 1)) * 0.8), sill: 0.9, head: Math.min(2.1, room.height - 0.2) })),
+    ...Array.from({ length: room.doors }, (_, i) => ({ kind: "door" as const, roomId: "room", side: "w" as const, x: -room.length / 2, z: -room.width / 2 + 1 + i * 1.4, width: 0.85, sill: 0, head: Math.min(2.1, room.height - 0.1) }))
+      .filter((d) => d.z + 0.45 < room.width / 2),
+  ], [room]);
+  const sendToAi = async () => {
+    setSending(true);
+    try {
+      const project = await sendViewToAi(p.id, capture.current);
+      setBundle((b) => ({ ...b, project }));
+      toast.info("View sent — pick a style and press Redesign for a photo-real render");
+      goTo("redesign");
+    } catch (err) { toast.error(err); } finally { setSending(false); }
+  };
   const floor = catalog.materials.find((m) => m.id === p.finishes.flooring)?.color ?? "#b9a58a";
   const wall = catalog.materials.find((m) => m.id === p.finishes.wall)?.color ?? "#efebe4";
   const selected = items.find((i) => i.id === selectedId) ?? null;
@@ -304,7 +244,6 @@ export default function StudioTab({ bundle, save }: TabProps) {
           <label className="field">Time of day: {String(Math.floor(light.sun)).padStart(2, "0")}:{light.sun % 1 ? "30" : "00"}
             <input type="range" min={0} max={23.5} step={0.5} value={light.sun} onChange={(e) => setLight({ ...light, sun: Number(e.target.value) })} />
           </label>
-          <label className="field">Lamp warmth<input type="range" min={0} max={1} step={0.05} value={light.warmth} onChange={(e) => setLight({ ...light, warmth: Number(e.target.value) })} /></label>
           <label className="check"><input type="checkbox" checked={light.lamps} onChange={(e) => setLight({ ...light, lamps: e.target.checked })} /> Ceiling lights on</label>
         </div>
       </div>
@@ -314,12 +253,19 @@ export default function StudioTab({ bundle, save }: TabProps) {
           <div className="row" style={{ gap: 4 }}>
             {(["split", "3d", "plan"] as const).map((v) => <button key={v} className={`btn sm ${view === v ? "primary" : ""}`} onClick={() => setView(v)}>{v === "3d" ? "3D view" : v === "plan" ? "Floor plan" : "Split"}</button>)}
           </div>
-          <span className="tiny">{dirty ? "Saving…" : "All changes saved"} · {items.length} items · catalogue value {money.format(furnitureValue)}</span>
+          <span className="row" style={{ gap: 8 }}>
+            <span className="tiny">{dirty ? "Saving…" : "All changes saved"} · {items.length} items · {money.format(furnitureValue)}</span>
+            {view !== "plan" && <button className="btn sm accent" onClick={sendToAi} disabled={sending}>{sending ? "Sending…" : "📸 Photo-real AI render"}</button>}
+          </span>
         </div>
         {view !== "plan" && (
           <div className="canvas-wrap">
             <Suspense fallback={null}>
-              <Scene3D room={room} items={items} selectedId={selectedId} floor={floor} wall={wall} light={light} onSelect={setSelectedId} onMove={move} />
+              <HouseScene
+                rooms={sceneRooms} openings={sceneOps} items={items} height={room.height}
+                mats={{ floorColor: () => ({ id: (p.finishes.flooring as string) ?? null, color: floor }), wallColor: () => ({ id: (p.finishes.wall as string) ?? null, color: wall }) }}
+                selectedId={selectedId} onSelect={setSelectedId} onMove={move} mode="orbit" walls="full" sun={light.sun} lampsOn={light.lamps} captureRef={capture}
+              />
             </Suspense>
           </div>
         )}

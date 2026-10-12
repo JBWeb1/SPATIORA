@@ -5,7 +5,7 @@ import { currentUser, rateLimit, requireAuth } from "../lib/auth.js";
 import { readUpload } from "../lib/images.js";
 import { ownedProject, projectContext, serializeProject } from "../lib/projects.js";
 import { analyzeRoom, chat, designBrief, type ChatTurn } from "../services/assistant.js";
-import { estimate } from "../services/estimator.js";
+import { estimateProject } from "../lib/estimateProject.js";
 
 export const assistantRouter = Router();
 assistantRouter.use(requireAuth);
@@ -42,12 +42,7 @@ assistantRouter.post("/projects/:id/brief", rateLimit(10, 60_000), async (req, r
   const p = ownedProject(req, String(req.params.id));
   const user = currentUser(req);
   const sp = serializeProject(p);
-  const f = sp.finishes as Record<string, string | number>;
-  const est = estimate(sp.room, {
-    flooring: f.flooring as string, wall: f.wall as string, ceiling: f.ceiling as string, tiles: f.tiles as string,
-    tiledArea: Number(f.tiledArea ?? 0), countertop: f.countertop as string, countertopLength: Number(f.countertopLength ?? 0),
-    cabinetry: f.cabinetry as string, cabinetryLength: Number(f.cabinetryLength ?? 0),
-  }, { quality: "standard", province: user.province, includeDemolition: false, electricalPoints: 0, plumbingPoints: 0, contingency: 0.1 });
+  const est = estimateProject(sp, { quality: "standard", province: user.province, includeDemolition: false, electricalPoints: 0, plumbingPoints: 0, contingency: 0.1 });
   const designs = all<{ style: string; prompt: string }>("SELECT style, prompt FROM designs WHERE project_id = ? ORDER BY favorite DESC, created_at DESC LIMIT 5", p.id);
   const tasks = all<{ title: string }>("SELECT title FROM tasks WHERE project_id = ? ORDER BY sort", p.id).map((t) => t.title);
   res.json(await designBrief(projectContext(p, user.province), { designs, estimateTotal: est.totals.total || undefined, tasks }));

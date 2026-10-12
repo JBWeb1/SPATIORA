@@ -65,6 +65,15 @@ export default function EstimateTab({ bundle, goTo, save }: TabProps) {
               </div>
             </div>
 
+            {e.rooms && e.rooms.length > 0 && (
+              <div className="card">
+                <h3>Room by room</h3>
+                <div className="table-wrap"><table className="table">
+                  <thead><tr><th>Room</th><th>Type</th><th className="num">Area</th><th className="num">Renovation (incl. VAT)</th></tr></thead>
+                  <tbody>{e.rooms.map((r) => <tr key={r.id}><td>{r.name}</td><td className="small muted">{r.type}</td><td className="num">{r.area} m²</td><td className="num">{money.format(r.total)}</td></tr>)}</tbody>
+                </table></div>
+              </div>
+            )}
             <div className="card">
               <div className="row between"><h3 style={{ margin: 0 }}>Cost breakdown</h3><button className="btn sm no-print" onClick={() => window.print()}>Print / save PDF</button></div>
               <div className="table-wrap">

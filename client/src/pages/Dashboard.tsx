@@ -3,7 +3,49 @@ import { Link, useNavigate } from "react-router-dom";
 import { api } from "../api";
 import { Modal } from "../components/ui";
 import { useAuth, useCatalog, useMoney, useToast } from "../state";
-import type { Client, Project } from "../types";
+import type { Client, House, Product, Project } from "../types";
+import PlanView from "../project/PlanView";
+import { autoFurnishHouse } from "../project/layoutTools";
+import { openings } from "../../../server/src/shared/house";
+
+interface SampleHome { id: string; name: string; location: string; bedrooms: number; bathrooms: number; area: number; budget: number; house: Omit<House, "items"> }
+
+function SampleHomes() {
+  const money = useMoney();
+  const nav = useNavigate();
+  const toast = useToast();
+  const [homes, setHomes] = useState<SampleHome[]>([]);
+  const [busy, setBusy] = useState<string | null>(null);
+  useEffect(() => { api.get<{ templates: SampleHome[] }>("/house-templates").then((r) => setHomes(r.templates)).catch(() => {}); }, []);
+  const open = async (h: SampleHome) => {
+    setBusy(h.id);
+    try {
+      const { project } = await api.post<{ project: Project }>("/projects/from-template", { templateId: h.id });
+      const { products } = await api.get<{ products: Product[] }>("/products");
+      const house = project.house!;
+      const items = autoFurnishHouse(house.rooms, openings(house.rooms), house.height, products);
+      await api.patch(`/projects/${project.id}`, { house: { ...house, items } });
+      nav(`/projects/${project.id}?tab=house`);
+    } catch (err) { toast.error(err); setBusy(null); }
+  };
+  if (!homes.length) return null;
+  return (
+    <div className="section" style={{ paddingTop: 8 }}>
+      <div className="row between"><h2 style={{ margin: 0 }}>Start from a real house</h2><span className="tiny">Furnished, costed and ready to redesign</span></div>
+      <div className="grid cols-4" style={{ marginTop: 12 }}>
+        {homes.map((h) => (
+          <div key={h.id} className="card tight stack" style={{ gap: 6 }}>
+            <PlanView rooms={h.house.rooms} ops={openings(h.house.rooms)} compact />
+            <b className="small">{h.name}</b>
+            <span className="tiny">{h.location} · {h.bedrooms} bed · {h.bathrooms} bath · {h.area} m²</span>
+            <span className="tiny">Typical refresh budget {money.format(h.budget)}</span>
+            <button className="btn sm primary" onClick={() => open(h)} disabled={busy !== null}>{busy === h.id ? "Opening…" : "Open this home"}</button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 interface DashboardData {
   stats: { projects: number; designs: number; favorites: number; budget: number };
@@ -160,6 +202,8 @@ export default function Dashboard() {
           ))}
         </div>
       )}
+
+      <SampleHomes />
 
       {data && (data.openTasks.length > 0 || data.recentComments.length > 0) && (
         <div className="grid cols-2 section">
