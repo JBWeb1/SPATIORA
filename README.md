@@ -36,6 +36,19 @@ It is built for South Africa first (rand, 15% VAT, provincial pricing, load-shed
 - **Room-by-room estimate.** The renovation calculator costs every room with its own finishes, adding kitchen and bathroom extras, and shows a per-room breakdown.
 - **Photo-real AI renders.** Capture any 3D view or walk-through angle and send it to the AI designer as the project photo. With `REPLICATE_API_TOKEN` set, Replicate produces photorealistic redesigns. This is pay-per-image.
 
+### Tidy & organise (v1.4)
+
+Take a photo of any room (the phone camera opens directly) and VISTORA helps make it look better and work better:
+
+- **Tidy score (0–100)** with **clutter hotspots** pinned on the photo. Each hotspot names the problem and the fix.
+- **A step-by-step tidy plan** in short timed sessions, with the biggest impact first. You tick the steps off, and progress is saved.
+- **Make it look better:** styling tips, layout changes that improve flow, storage zones so everything has a home, daily habits, and keep / donate / recycle lists.
+- **Storage that fits:** organiser products from the marketplace that match what was found, which you can add to the shopping list in one tap.
+- **See it tidied:** with `REPLICATE_API_TOKEN` set, an AI photo of the same room after tidying (a before/after slider). Without it, you get a downloadable "tidy plan" image with the fixes numbered on your photo.
+- **Re-check later** to see your score go up. Every room keeps its own history. For whole-house projects you pick the room from your floor plan.
+
+With `ANTHROPIC_API_KEY`, Claude reads the photo for the score, hotspots and plan. Without it, VISTORA uses built-in expert plans for each room type and you rate the room with a quick self-check.
+
 ### Features added on top of the original brief
 
 - **Style DNA quiz.** A 6-question quiz that builds your style profile and palette. It personalises the default style, colours and product picks.

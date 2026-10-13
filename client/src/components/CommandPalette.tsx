@@ -14,7 +14,7 @@ const PAGES: Item[] = [
   { id: "p-work", icon: "▤", label: "Pro Workspace — quotes & clients", hint: "Page", to: "/workspace" },
   { id: "p-account", icon: "⚙", label: "Account, plan & updates", hint: "Page", to: "/account" },
 ];
-const PROJECT_TABS = [["redesign", "AI Redesign"], ["studio", "3D Studio"], ["estimate", "Estimate"], ["planner", "Planner"], ["share", "Share & brief"]];
+const PROJECT_TABS = [["redesign", "AI Redesign"], ["studio", "3D Studio"], ["tidy", "Tidy & organise"], ["house", "Whole house"], ["estimate", "Estimate"], ["planner", "Planner"], ["share", "Share & brief"]];
 
 /** Quick search / jump anywhere: Ctrl+K or ⌘K. */
 export default function CommandPalette() {

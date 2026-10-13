@@ -173,6 +173,22 @@ CREATE TABLE IF NOT EXISTS layout_versions (
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
+CREATE TABLE IF NOT EXISTS tidy_checks (
+  id TEXT PRIMARY KEY,
+  project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+  room_name TEXT NOT NULL,
+  room_type TEXT NOT NULL,
+  photo TEXT,
+  report TEXT NOT NULL,
+  provider TEXT NOT NULL,
+  score INTEGER,
+  done TEXT NOT NULL DEFAULT '[]',
+  render TEXT,
+  render_provider TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_tidy_checks_project ON tidy_checks(project_id, created_at);
 CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id, read, created_at);
 CREATE INDEX IF NOT EXISTS idx_layout_versions_project ON layout_versions(project_id);
 CREATE INDEX IF NOT EXISTS idx_projects_user ON projects(user_id);

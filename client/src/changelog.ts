@@ -7,6 +7,17 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: "1.4.0",
+    date: "2026-10-13",
+    highlights: [
+      "Tidy & organise: snap a photo of any room and get a tidy score, clutter hotspots marked on your photo and a step-by-step plan you can tick off.",
+      "Make it look better: styling tips, a better layout, storage zones and keep / donate / recycle lists for each room.",
+      "Storage that fits: matching organiser products from local retailers, one tap to add to your shopping list.",
+      "See it tidied: an AI photo of your room after tidying (when connected), or a printable tidy plan image.",
+      "Re-check after tidying to see your score go up.",
+    ],
+  },
+  {
     version: "1.3.0",
     date: "2026-10-12",
     highlights: [

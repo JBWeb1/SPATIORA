@@ -45,21 +45,21 @@ VISTORA styles: ${STYLES.map((s) => `${s.name} (${s.tagline})`).join("; ")}.
 VISTORA materials: ${MATERIALS.map((m) => `${m.name} [${m.category}, R${m.price}/${m.unit}]`).join("; ")}.
 VISTORA marketplace highlights: ${PRODUCTS.slice(0, 30).map((p) => `${p.name} (R${p.price})`).join("; ")}.`;
 
-function contextBlock(ctx: ProjectContext) {
+export function contextBlock(ctx: ProjectContext) {
   const area = (ctx.room.length * ctx.room.width).toFixed(1);
   return `Current project: "${ctx.name}" — ${ctx.roomType}, ${ctx.room.length}m × ${ctx.room.width}m (${area} m²), ceiling ${ctx.room.height}m, province ${ctx.province}.
 Budget: ${ctx.budget ? `${ctx.currency} ${ctx.budget.toLocaleString("en-ZA")}` : "not set"}. Preferred style: ${ctx.stylePreference ? getStyle(ctx.stylePreference).name : "undecided"}.
 Selected finishes: ${JSON.stringify(ctx.finishes)}.`;
 }
 
-function textOf(message: Anthropic.Beta.BetaMessage): string {
+export function textOf(message: Anthropic.Beta.BetaMessage): string {
   if (message.stop_reason === "refusal") {
     return "I can't help with that request, but I'm happy to help with your design or renovation plans.";
   }
   return message.content.filter((b): b is Anthropic.Beta.BetaTextBlock => b.type === "text").map((b) => b.text).join("\n").trim();
 }
 
-async function ask(params: {
+export async function ask(params: {
   messages: Anthropic.Beta.BetaMessageParam[];
   effort: "low" | "medium" | "high";
   schema?: Record<string, unknown>;
@@ -78,11 +78,11 @@ async function ask(params: {
 }
 
 type ImageMime = "image/jpeg" | "image/png" | "image/webp" | "image/gif";
-const imageBlock = (img: { data: Buffer; mime: string }): Anthropic.Beta.BetaImageBlockParam => ({
+export const imageBlock = (img: { data: Buffer; mime: string }): Anthropic.Beta.BetaImageBlockParam => ({
   type: "image",
   source: { type: "base64", media_type: img.mime as ImageMime, data: img.data.toString("base64") },
 });
-const visionSupported = (img: { mime: string } | null) => !!img && ["image/jpeg", "image/png", "image/webp"].includes(img.mime);
+export const visionSupported = (img: { mime: string } | null) => !!img && ["image/jpeg", "image/png", "image/webp"].includes(img.mime);
 
 // ------------------------------- Chat ------------------------------------------------
 

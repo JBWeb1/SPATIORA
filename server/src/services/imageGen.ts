@@ -58,7 +58,7 @@ const hexToRgb = (hex: string) => {
   const h = hex.replace("#", "");
   return [0, 2, 4].map((i) => parseInt(h.slice(i, i + 2), 16) / 255);
 };
-const esc = (s: string) => s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
+export const esc = (s: string) => s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
 
 function paletteFor(style: DesignStyle, prefs: RedesignPreferences): string[] {
   const custom = (prefs.colors ?? []).filter((c) => /^#[0-9a-f]{6}$/i.test(c));
@@ -264,17 +264,23 @@ export function activeImageProvider(): RedesignResult["provider"] {
   return "studio-preview";
 }
 
+/** Run the configured photo-real provider; null when none is set up or it fails. */
+export async function photoRealImage(input: RedesignInput, prompt: string, negative: string): Promise<{ data: Buffer; mime: string; provider: "replicate" | "custom" } | null> {
+  const provider = activeImageProvider();
+  if (provider === "studio-preview" || !input.source) return null;
+  try {
+    const img = provider === "custom" ? await customProvider(input, prompt, negative) : await replicate(input, prompt, negative);
+    return { ...img, provider };
+  } catch (err) {
+    console.error(`[vistora] ${provider} image generation failed:`, err);
+    return null;
+  }
+}
+
 export async function generateRedesign(input: RedesignInput): Promise<RedesignResult> {
   const { prompt, negative } = buildPrompt(input);
-  const provider = activeImageProvider();
-  if (provider !== "studio-preview" && input.source) {
-    try {
-      const img = provider === "custom" ? await customProvider(input, prompt, negative) : await replicate(input, prompt, negative);
-      return { imageUrl: saveImage(img.data, img.mime), provider, prompt };
-    } catch (err) {
-      console.error(`[vistora] ${provider} image generation failed, using Studio Preview:`, err);
-    }
-  }
+  const img = await photoRealImage(input, prompt, negative);
+  if (img) return { imageUrl: saveImage(img.data, img.mime), provider: img.provider, prompt };
   const svg = renderStudioPreview(input);
   return { imageUrl: saveImage(Buffer.from(svg, "utf8"), "image/svg+xml"), provider: "studio-preview", prompt };
 }

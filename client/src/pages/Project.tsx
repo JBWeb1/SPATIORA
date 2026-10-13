@@ -18,11 +18,13 @@ import ShareTab from "../project/ShareTab";
 // three.js is only downloaded when the 3D Studio is opened.
 const StudioTab = lazy(() => import("../project/StudioTab"));
 const HouseTab = lazy(() => import("../project/HouseTab"));
+const TidyTab = lazy(() => import("../project/TidyTab"));
 
 const TABS = [
   ["redesign", "✦ AI Redesign"],
   ["house", "🏠 Whole house"],
   ["studio", "▣ 3D Room"],
+  ["tidy", "🧹 Tidy & organise"],
   ["materials", "◧ Materials"],
   ["assistant", "✎ Assistant"],
   ["estimate", "R Estimate"],
@@ -152,6 +154,7 @@ export default function ProjectPage() {
         {tab === "redesign" && <RedesignTab {...props} />}
         {tab === "house" && <Suspense fallback={<p className="muted">Loading house designer…</p>}><HouseTab {...props} /></Suspense>}
         {tab === "studio" && <Suspense fallback={<p className="muted">Loading 3D Studio…</p>}><StudioTab {...props} /></Suspense>}
+        {tab === "tidy" && <Suspense fallback={<p className="muted">Loading…</p>}><TidyTab {...props} /></Suspense>}
         {tab === "materials" && <MaterialsTab {...props} />}
         {tab === "assistant" && <AssistantTab {...props} />}
         {tab === "estimate" && <EstimateTab {...props} />}
